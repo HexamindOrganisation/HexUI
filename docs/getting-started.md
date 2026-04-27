@@ -48,6 +48,24 @@ In your app's CSS entry:
 @import "agent-ui/style.css";    /* structural shell, layout chrome, diagnostics */
 ```
 
+### Recommended: load Inter
+
+The Tailwind preset declares `Inter` at the top of the `font-sans` stack
+(falling back to `system-ui`). For consistent typography across OSes, load
+Inter once in your app shell — e.g. via Google Fonts in your HTML head:
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+/>
+```
+
+Or self-host with `@fontsource/inter`. If Inter isn't loaded the UI
+gracefully falls back to the system font.
+
 You also need a way to read YAML as text. With Vite the idiomatic form is
 `import configText from "./ui.yaml?raw"`. With other bundlers, read the YAML
 however you prefer and pass the string (or a parsed object) to `<AgentUI>`.

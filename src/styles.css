@@ -104,24 +104,29 @@
 }
 .au-tab-active { border-bottom-color: var(--au-accent); color: var(--au-accent); }
 
-/* Widget host */
+/* Widget host — borderless card with subtle elevation, shadcn-aware. */
 .au-widget-host {
-  background: var(--au-bg);
-  border: 1px solid var(--au-border);
-  border-radius: var(--au-radius);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 0;
+  border-radius: var(--radius, var(--au-radius));
   padding: var(--au-space-3);
   overflow: auto;
-  min-height: 80px;
+  /* Tight, layered Vercel/Linear-style elevation. */
+  box-shadow:
+    0 1px 2px 0 rgb(0 0 0 / 0.04),
+    0 1px 3px 0 rgb(0 0 0 / 0.06);
 }
 .au-widget-host-chromeless {
   background: transparent;
+  color: inherit;
   border: 0;
   border-radius: 0;
   padding: 0;
   overflow: visible;
-  min-height: 0;
+  box-shadow: none;
 }
-.au-widget-error { color: #b00020; padding: var(--au-space-2); }
+.au-widget-error { color: hsl(var(--destructive)); padding: var(--au-space-2); }
 
 /* Placeholder (unknown widget type) */
 .au-widget-placeholder {

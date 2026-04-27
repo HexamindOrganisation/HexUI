@@ -32,16 +32,23 @@ const DEFAULT_TOKENS: ThemeTokens = {
   space3: "12px",
   space4: "16px",
   space5: "24px",
-  font: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+  font: "Inter var, Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
 };
 
 export function resolveTheme(
   page: Page,
   override: Partial<ThemeTokens> = {},
 ): ResolvedTheme {
-  const accent = override.accent ?? page.theme?.accent ?? page.main_color ?? DEFAULT_TOKENS.accent;
-  const bg = override.bg ?? page.theme?.background ?? DEFAULT_TOKENS.bg;
-  const fg = override.fg ?? page.theme?.foreground ?? DEFAULT_TOKENS.fg;
+  // Track which fields the user actually provided so we only override the
+  // shipped shadcn palette when they've explicitly opted in.
+  const userAccent =
+    override.accent ?? page.theme?.accent ?? page.main_color;
+  const userBg = override.bg ?? page.theme?.background;
+  const userFg = override.fg ?? page.theme?.foreground;
+
+  const accent = userAccent ?? DEFAULT_TOKENS.accent;
+  const bg = userBg ?? DEFAULT_TOKENS.bg;
+  const fg = userFg ?? DEFAULT_TOKENS.fg;
   const accentFg = override.accentFg ?? contrastFg(accent);
   const border = override.border ?? DEFAULT_TOKENS.border;
 
@@ -56,6 +63,8 @@ export function resolveTheme(
   };
 
   const cssVars: Record<string, string> = {
+    // Legacy --au-* tokens, used by the structural shell (sidebar, tabs,
+    // diagnostics overlay, etc.).
     "--au-bg": tokens.bg,
     "--au-fg": tokens.fg,
     "--au-accent": tokens.accent,
@@ -71,6 +80,32 @@ export function resolveTheme(
     "--au-accent-hover": shade(tokens.accent, -0.1),
     "--au-accent-soft": shade(tokens.accent, 0.85),
   };
+
+  // Bridge user-provided theme overrides into the shadcn palette so the
+  // built-in widgets pick up the same colors. We only write a shadcn var
+  // when the user set the corresponding source — otherwise the curated
+  // shadcn defaults from `agent-ui/shadcn.css` stand.
+  if (userBg) {
+    const hsl = hexToHsl(userBg);
+    if (hsl) cssVars["--background"] = hsl;
+  }
+  if (userFg) {
+    const hsl = hexToHsl(userFg);
+    if (hsl) {
+      cssVars["--foreground"] = hsl;
+      cssVars["--card-foreground"] = hsl;
+      cssVars["--popover-foreground"] = hsl;
+    }
+  }
+  if (userAccent) {
+    const hsl = hexToHsl(accent);
+    if (hsl) {
+      cssVars["--primary"] = hsl;
+      cssVars["--ring"] = hsl;
+    }
+    const fgHsl = hexToHsl(accentFg);
+    if (fgHsl) cssVars["--primary-foreground"] = fgHsl;
+  }
 
   return { tokens, cssVars };
 }
@@ -118,4 +153,29 @@ function rgbToHex(r: number, g: number, b: number): string {
 
 function clamp(x: number): number {
   return Math.max(0, Math.min(255, x));
+}
+
+/**
+ * Convert a hex color to the `H S% L%` triplet shadcn variables expect
+ * (e.g. `199 73% 41%`). Returns null if the input isn't a valid hex.
+ */
+function hexToHsl(hex: string): string | null {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }

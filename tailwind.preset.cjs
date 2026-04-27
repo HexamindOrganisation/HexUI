@@ -69,6 +69,8 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          "Inter var",
+          "Inter",
           "system-ui",
           "-apple-system",
           "Segoe UI",

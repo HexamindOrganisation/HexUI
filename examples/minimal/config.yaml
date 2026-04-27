@@ -1,11 +1,13 @@
 # yaml-language-server: $schema=../../agent-ui.schema.json
 page:
-  main_color: "#1D84B5"
   layout_type: "grid"
+  # Slate neutrals + cyan accent — bridged to shadcn HSL vars so the colors
+  # flow through every built-in widget (buttons, chat bubbles, focus rings,
+  # file-tree hover, etc.). Swap for indigo, emerald, rose, etc. as needed.
   theme:
-    background: "#DBDBDB"
-    foreground: "#0D1F22"
-    accent: "#1D84B5"
+    background: "#F8FAFC"    # slate-50  — soft off-white page background
+    foreground: "#0F172A"    # slate-900 — near-black text, readable but not harsh
+    accent: "#0891B2"        # cyan-600  — primary brand color for CTAs
 
 widgets:
   - name: "header"

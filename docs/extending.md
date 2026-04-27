@@ -365,10 +365,11 @@ module.exports = {
 };
 ```
 
-### Structural shell tokens
+### Structural shell tokens — bridged to shadcn
 
-The `theme` prop overrides the legacy palette compiled into CSS variables on
-the `<AgentUI>` root:
+The `theme` prop (and the `page.theme.*` / `page.main_color` YAML fields)
+override the legacy palette compiled into CSS variables on the `<AgentUI>`
+root:
 
 ```tsx
 <AgentUI
@@ -392,8 +393,24 @@ Available tokens: `bg`, `fg`, `accent`, `accentFg`, `border`, `radius`,
 --au-accent-hover, --au-accent-soft
 ```
 
-These are read by the structural shell only — the built-in widgets ignore
-them and use the shadcn variables.
+These are read by the structural shell.
+
+**Theme overrides are bridged to the shadcn palette automatically.** When
+you set `theme.background`, `theme.foreground`, or `theme.accent` (or
+`page.main_color`), the resolver also writes the equivalent HSL triplet
+to the matching shadcn variable so the built-in widgets pick up the same
+colors:
+
+| Source                                   | Bridges to (shadcn) |
+|------------------------------------------|---------------------|
+| `theme.background`                       | `--background` |
+| `theme.foreground`                       | `--foreground`, `--card-foreground`, `--popover-foreground` |
+| `theme.accent` *or* `page.main_color`    | `--primary`, `--ring` |
+| derived `accentFg` (auto-contrast)       | `--primary-foreground` |
+
+Variables you don't override (`--accent`, `--muted`, `--destructive`,
+`--card`, `--border`, `--input`, …) keep their curated defaults from
+`agent-ui/shadcn.css`.
 
 ### Per-widget styling
 

@@ -99,19 +99,20 @@ function Bubble({
   return (
     <div
       className={cn(
-        "flex flex-col",
-        role === "user" && "items-end",
-        role === "assistant" && "items-start",
+        "flex w-full flex-col",
+        role === "user" && "items-end pl-12",
+        role === "assistant" && "items-start pr-12",
         role === "system" && "items-center",
       )}
     >
       <span
         className={cn(
-          "max-w-[85%] whitespace-pre-wrap break-words rounded-md px-3 py-2 text-sm",
-          role === "user" && "bg-primary text-primary-foreground",
-          role === "assistant" && "bg-accent text-accent-foreground",
+          "max-w-[min(65ch,_100%)] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm",
+          role === "user" && "bg-primary text-primary-foreground rounded-br-md",
+          role === "assistant" &&
+            "bg-accent text-accent-foreground rounded-bl-md",
           role === "system" &&
-            "bg-muted text-xs italic text-muted-foreground",
+            "bg-muted text-xs italic text-muted-foreground shadow-none",
           partial && "opacity-90",
         )}
       >

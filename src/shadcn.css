@@ -78,6 +78,8 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    /* Inter ligatures + alt-zero. Falls back gracefully if the font isn't loaded. */
+    font-feature-settings: "cv11", "ss01", "rlig", "calt";
   }
 }
