@@ -22,6 +22,7 @@ export interface ResolvedWidget {
   tab?: string;
   component: ComponentType<WidgetProps<unknown>>;
   chromeless?: boolean;
+  slot?: "main" | "footer";
 }
 
 export interface ResolvedConfig {
@@ -196,6 +197,7 @@ export function resolve(
       ...(data.tab !== undefined && { tab: data.tab }),
       component: def.component,
       ...(def.chromeless && { chromeless: true }),
+      ...(def.slot && def.slot !== "main" && { slot: def.slot }),
     });
 
     // Cross-check action names referenced anywhere in the widget props.

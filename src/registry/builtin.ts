@@ -39,6 +39,7 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     schema: PageFooterWidgetSchema,
     component: PageFooterWidgetComponent,
     chromeless: true,
+    slot: "footer",
   }),
   defineWidget({
     type: "ai-chat-input",

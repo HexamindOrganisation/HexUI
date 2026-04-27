@@ -12,6 +12,7 @@ export function defineWidget<TSchema extends ZodTypeAny>(spec: {
   component: ComponentType<WidgetProps<z.infer<TSchema>>>;
   defaults?: Partial<z.infer<TSchema>>;
   chromeless?: boolean;
+  slot?: "main" | "footer";
 }): WidgetDefinition<TSchema> {
   return { ...spec };
 }

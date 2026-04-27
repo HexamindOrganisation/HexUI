@@ -79,6 +79,16 @@ page:
   tab's grid.
 - **`size.height`** is pixels or the literal string `"auto"`.
 
+### Footer-slot widgets bypass the layout
+
+Some widget types are registered with `slot: "footer"` (currently
+[`page-footer`](./widgets.md#page-footer)). Those widgets are pulled out of
+the `widgets:` array before the layout is computed and rendered in a
+dedicated footer slot, pinned to the bottom of the page. For these widgets
+`position` is ignored and `size.width` always spans the full page. Custom
+widgets can opt into the same behavior — see
+[extending.md — slot](./extending.md#footer-slot-widgets).
+
 ## Layouts
 
 ### `layout_type: grid`

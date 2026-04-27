@@ -1,7 +1,11 @@
 # yaml-language-server: $schema=../../agent-ui.schema.json
 page:
-  main_color: "#2E86DE"
+  main_color: "#1D84B5"
   layout_type: "grid"
+  theme:
+    background: "#DBDBDB"
+    foreground: "#0D1F22"
+    accent: "#1D84B5"
 
 widgets:
   - name: "header"
@@ -34,36 +38,13 @@ widgets:
         action: "delete_all"
         variant: "destructive"
 
-  - name: "history"
-    type: "ai-history"
-    position:
-      horizontal: "left"
-      vertical: "middle"
-    size:
-      width: 12
-      height: "auto"
-    data_source:
-      action: "list_conversations"
-    on_select: "load_conversation"
-    empty_text: "No past conversations"
-
-  - name: "agent-output"
-    type: "ai-response"
-    position:
-      horizontal: "right"
-      vertical: "middle"
-    size:
-      width: 6
-      height: "auto"
-    empty_text: "Ask the agent something below."
-
   - name: "Files"
     type: "file-tree"
     position:
       horizontal: "left"
       vertical: "middle"
     size:
-      width: 6
+      width: 3
       height: 400
     data_source:
       action: "list_user_files"
@@ -73,6 +54,29 @@ widgets:
         action: "open_file"
       - name: "Delete"
         action: "delete_file"
+
+  - name: "agent-output"
+    type: "ai-response"
+    position:
+      horizontal: "left"
+      vertical: "middle"
+    size:
+      width: 6
+      height: "auto"
+    empty_text: "Ask the agent something below."
+
+  - name: "history"
+    type: "ai-history"
+    position:
+      horizontal: "right"
+      vertical: "middle"
+    size:
+      width: 3
+      height: "auto"
+    data_source:
+      action: "list_conversations"
+    on_select: "load_conversation"
+    empty_text: "No past conversations"
 
   - name: "chat-input"
     type: "ai-chat-input"
@@ -86,9 +90,6 @@ widgets:
 
   - name: "footer"
     type: "page-footer"
-    position:
-      horizontal: "left"
-      vertical: "low"
     size:
       width: 12
       height: "auto"

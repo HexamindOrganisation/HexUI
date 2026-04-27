@@ -13,18 +13,27 @@ custom widgets, see [extending.md](./extending.md).
 
 ## Widget catalog
 
-| `type`           | Purpose                              | Chromeless |
-|------------------|--------------------------------------|------------|
-| `page-header`    | Title + optional subtitle/icon       | yes        |
-| `page-footer`    | Single-line footer                   | yes        |
-| `button-group`   | Row/column of action buttons         | no         |
-| `file-tree`      | Recursive folder/file tree           | no         |
-| `ai-chat-input`  | Textarea + send → AgentBridge        | yes        |
-| `ai-response`    | Live chat transcript (user + agent)  | yes        |
-| `ai-history`     | List of past conversations           | yes        |
+| `type`           | Purpose                              | Chromeless | Slot   |
+|------------------|--------------------------------------|------------|--------|
+| `page-header`    | Title + optional subtitle/icon       | yes        | main   |
+| `page-footer`    | Single-line footer                   | yes        | footer |
+| `button-group`   | Row/column of action buttons         | no         | main   |
+| `file-tree`      | Recursive folder/file tree           | no         | main   |
+| `ai-chat-input`  | Textarea + send → AgentBridge        | yes        | main   |
+| `ai-response`    | Live chat transcript (user + agent)  | yes        | main   |
+| `ai-history`     | List of past conversations           | yes        | main   |
 
 **Chromeless** widgets opt out of the default `<div class="au-widget-host">`
 border/padding so they sit flush with the page edges.
+
+**Slot** controls where a widget renders inside the AgentUI shell:
+
+- `main` *(default)* — the widget participates in the layout
+  (`grid` / `flex` / `sidebar` / `tabs`). Honors `position`, `size.width`,
+  and `tab`.
+- `footer` — the widget is rendered **outside** the layout, pinned to the
+  bottom of the page no matter how short or tall the main content is.
+  `position` is ignored. The footer slot spans the full page width.
 
 ---
 
@@ -62,22 +71,41 @@ A `<header>` with the icon (if any) on the left, then a stacked `title` /
 
 ## `page-footer`
 
-A single-line footer. Same role as `page-header` but at the bottom.
+A single-line footer pinned to the bottom of the page.
+
+This widget renders in the **footer slot** — outside the layout. It always
+sits at the bottom of the AgentUI shell, regardless of how short or tall
+the main content is. If the main content is shorter than the viewport, the
+footer pins to the viewport bottom; if it's taller, the footer sits at the
+end of the document.
 
 ### YAML
 
 ```yaml
 - name: "footer"
   type: "page-footer"
-  position: { horizontal: "left", vertical: "low" }
   size: { width: 12, height: "auto" }
   text: "© 2026 ACME · v1.2.0"   # optional
 ```
+
+`position` is **not** required and is ignored — the footer is always last.
+You can keep it in the YAML if you want, but it has no effect.
+
+`size.width` is also effectively ignored: the footer slot spans the full
+page width. `size.height` still applies if you set a fixed value, otherwise
+the footer sizes to its content.
 
 ### Renders
 
 A `<footer>` centered text band, muted foreground, top border. If `text` is
 omitted, an empty footer band still renders (useful as a spacer).
+
+### Multiple footers
+
+If you place multiple `page-footer` widgets (or any custom widgets
+registered with `slot: "footer"` — see [extending.md](./extending.md)),
+they stack vertically in the footer slot in YAML order. The whole stack is
+what gets pinned to the bottom.
 
 ---
 
@@ -460,9 +488,8 @@ widgets:
 
   - name: "footer"
     type: "page-footer"
-    position: { horizontal: "left", vertical: "low" }
     size: { width: 12, height: "auto" }
-    text: "agent-ui · powered by shadcn"
+    text: "agent-ui · powered by shadcn"   # rendered in the footer slot, always at the page bottom
 ```
 
 The grid packer places `vertical: "high"` items first, then `middle`, then

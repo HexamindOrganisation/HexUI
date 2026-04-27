@@ -15,6 +15,7 @@ import { GridRoot } from "./layout/GridRoot.js";
 import { FlexRoot } from "./layout/FlexRoot.js";
 import { SidebarRoot } from "./layout/SidebarRoot.js";
 import { TabsRoot } from "./layout/TabsRoot.js";
+import { WidgetHost } from "./WidgetHost.js";
 
 export interface AgentUIProps {
   /** Raw YAML string, already-parsed object, or fetchable URL. */
@@ -118,6 +119,13 @@ export function AgentUI(props: AgentUIProps): JSX.Element {
         style={plan.theme.cssVars as React.CSSProperties}
       >
         {renderLayout(plan, dispatcher)}
+        {plan.footer.length > 0 && (
+          <div className="au-footer-slot">
+            {plan.footer.map((w) => (
+              <WidgetHost key={w.id} widget={w} dispatcher={dispatcher} />
+            ))}
+          </div>
+        )}
         {diagnostics === "overlay" && plan.diagnostics.length > 0 && (
           <DiagnosticsOverlay diagnostics={plan.diagnostics} />
         )}

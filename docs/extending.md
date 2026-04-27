@@ -90,6 +90,31 @@ defineWidget({
 This is what the built-in `page-header`, `page-footer`, `ai-chat-input`,
 `ai-response`, and `ai-history` widgets do.
 
+### Footer-slot widgets
+
+Pass `slot: "footer"` to render the widget outside the layout, pinned to
+the bottom of the page:
+
+```ts
+defineWidget({
+  type: "status-bar",
+  schema: StatusBarSchema,
+  component: StatusBar,
+  chromeless: true,
+  slot: "footer",
+});
+```
+
+Footer-slot widgets:
+
+- Are **excluded** from the layout (`grid` / `flex` / `sidebar` / `tabs`).
+- Honor neither `position` nor `size.width` — they always span the full
+  page width.
+- Are stacked in YAML order in a single footer area pinned to the bottom of
+  the AgentUI shell.
+
+This is what the built-in `page-footer` widget does.
+
 ### Replacing a built-in
 
 Pass your version *after* `builtinWidgets` — later registrations win. For

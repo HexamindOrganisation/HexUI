@@ -18,7 +18,10 @@ import type { WidgetProps } from "../registry/types.js";
 export interface RenderPlan {
   theme: ResolvedTheme;
   layout: LayoutPlan;
+  /** Widgets that participate in the layout (slot: "main"). */
   widgets: RenderPlanWidget[];
+  /** Widgets pinned to the bottom of the page (slot: "footer"), in YAML order. */
+  footer: RenderPlanWidget[];
   diagnostics: Diagnostic[];
 }
 
@@ -30,6 +33,7 @@ export interface RenderPlanWidget {
   height: number | "auto";
   component: ComponentType<WidgetProps<unknown>>;
   chromeless?: boolean;
+  slot?: "main" | "footer";
 }
 
 export interface CompileOptions {
@@ -59,23 +63,29 @@ export function compilePlan(
   const resolved = normalize(r.value);
   const theme = resolveTheme(resolved.page, opts.themeOverride ?? {});
 
+  // Footer-slot widgets render outside the layout, pinned to the page
+  // bottom, so we don't pass them to the layout compiler.
+  const mainWidgets = resolved.widgets.filter((w) => w.slot !== "footer");
+  const footerWidgets = resolved.widgets.filter((w) => w.slot === "footer");
+
   let layout: LayoutPlan;
   const lt = resolved.page.layout_type;
   if (lt === "grid") {
-    const g = compileGrid(resolved.widgets, diagnostics);
+    const g = compileGrid(mainWidgets, diagnostics);
     layout = { kind: "grid", template: g.template, cells: g.cells };
   } else if (lt === "flex") {
-    layout = compileFlex(resolved.widgets, "column");
+    layout = compileFlex(mainWidgets, "column");
   } else if (lt === "sidebar") {
-    layout = compileSidebar(resolved.page, resolved.widgets, diagnostics);
+    layout = compileSidebar(resolved.page, mainWidgets, diagnostics);
   } else {
-    layout = compileTabs(resolved.widgets, diagnostics);
+    layout = compileTabs(mainWidgets, diagnostics);
   }
 
   const plan: RenderPlan = {
     theme,
     layout,
-    widgets: resolved.widgets.map(toPlanWidget),
+    widgets: mainWidgets.map(toPlanWidget),
+    footer: footerWidgets.map(toPlanWidget),
     diagnostics,
   };
 
@@ -92,5 +102,6 @@ function toPlanWidget(w: ResolvedWidget): RenderPlanWidget {
     height: w.size.height,
     component: w.component,
     ...(w.chromeless && { chromeless: true }),
+    ...(w.slot && w.slot !== "main" && { slot: w.slot }),
   };
 }

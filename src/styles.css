@@ -34,6 +34,13 @@
 }
 .au-root *, .au-root *::before, .au-root *::after { box-sizing: border-box; }
 
+/* Footer slot — pinned to the bottom of the page regardless of content height. */
+.au-footer-slot {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+}
+
 .au-loading, .au-config-error {
   padding: var(--au-space-5);
   color: var(--au-fg);
