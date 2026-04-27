@@ -1,0 +1,175 @@
+/* agent-ui base stylesheet — imports via: import "agent-ui/style.css"
+ *
+ * Built-in widgets are styled with Tailwind via the shadcn preset
+ * (`agent-ui/tailwind-preset` + `agent-ui/shadcn.css`). What lives here is
+ * just the structural shell, the layout chrome (sidebar / tabs), the
+ * widget-host frame, the unknown-widget placeholder, and the diagnostics
+ * overlay.
+ */
+
+.au-root {
+  --au-bg: #ffffff;
+  --au-fg: #1a1a1a;
+  --au-accent: #2E86DE;
+  --au-accent-fg: #ffffff;
+  --au-accent-hover: #2368b8;
+  --au-accent-soft: #e9f2fc;
+  --au-border: #e4e4e7;
+  --au-radius: 8px;
+  --au-space-1: 4px;
+  --au-space-2: 8px;
+  --au-space-3: 12px;
+  --au-space-4: 16px;
+  --au-space-5: 24px;
+  --au-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--au-bg);
+  color: var(--au-fg);
+  font-family: var(--au-font);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.au-root *, .au-root *::before, .au-root *::after { box-sizing: border-box; }
+
+.au-loading, .au-config-error {
+  padding: var(--au-space-5);
+  color: var(--au-fg);
+}
+.au-config-error-title {
+  font-weight: 600;
+  margin-bottom: var(--au-space-3);
+}
+
+/* Generic icon button (used by the diagnostics overlay's dismiss control). */
+.au-icon-button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+.au-icon-button:hover { background: rgba(0,0,0,0.06); }
+
+/* Sidebar layout */
+.au-sidebar-root { display: grid; grid-template-columns: 200px 1fr; gap: 0; }
+.au-sidebar {
+  border-right: 1px solid var(--au-border);
+  padding: var(--au-space-3) 0;
+  display: flex;
+  flex-direction: column;
+}
+.au-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--au-space-2);
+  padding: var(--au-space-2) var(--au-space-4);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--au-fg);
+  font: inherit;
+  text-align: left;
+}
+.au-sidebar-item:hover { background: var(--au-accent-soft); }
+.au-sidebar-icon { width: 16px; height: 16px; }
+.au-sidebar-main { padding: var(--au-space-4); }
+
+/* Tabs layout */
+.au-tab-bar {
+  display: flex;
+  gap: var(--au-space-1);
+  border-bottom: 1px solid var(--au-border);
+  margin-bottom: var(--au-space-3);
+}
+.au-tab {
+  padding: var(--au-space-2) var(--au-space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font: inherit;
+  color: var(--au-fg);
+}
+.au-tab-active { border-bottom-color: var(--au-accent); color: var(--au-accent); }
+
+/* Widget host */
+.au-widget-host {
+  background: var(--au-bg);
+  border: 1px solid var(--au-border);
+  border-radius: var(--au-radius);
+  padding: var(--au-space-3);
+  overflow: auto;
+  min-height: 80px;
+}
+.au-widget-host-chromeless {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  overflow: visible;
+  min-height: 0;
+}
+.au-widget-error { color: #b00020; padding: var(--au-space-2); }
+
+/* Placeholder (unknown widget type) */
+.au-widget-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--au-space-1);
+  padding: var(--au-space-2);
+  border: 1px dashed var(--au-border);
+  border-radius: var(--au-radius);
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.02),
+    rgba(0,0,0,0.02) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  color: #666;
+}
+.au-widget-placeholder-title { font-weight: 600; color: var(--au-fg); }
+.au-widget-placeholder-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(0,0,0,0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Diagnostics overlay */
+.au-diagnostics {
+  position: fixed;
+  bottom: var(--au-space-4);
+  right: var(--au-space-4);
+  max-width: 420px;
+  max-height: 60vh;
+  background: var(--au-bg);
+  border: 1px solid var(--au-border);
+  border-radius: var(--au-radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  overflow: hidden;
+}
+.au-diagnostics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--au-space-2) var(--au-space-3);
+  border-bottom: 1px solid var(--au-border);
+}
+.au-diagnostics-list { list-style: none; padding: var(--au-space-2); margin: 0; overflow: auto; }
+.au-diag { padding: var(--au-space-2); border-left: 3px solid transparent; margin-bottom: var(--au-space-2); }
+.au-diag-error { border-left-color: #b00020; background: #fff5f5; }
+.au-diag-warning { border-left-color: #f59e0b; background: #fffbeb; }
+.au-diag-head { display: flex; gap: var(--au-space-2); font-size: 11px; color: #666; }
+.au-diag-code { font-family: ui-monospace, monospace; }
+.au-diag-loc { font-family: ui-monospace, monospace; }
+.au-diag-msg { margin-top: 2px; }
+.au-diag-path { margin-top: 2px; font-size: 11px; color: #888; font-family: ui-monospace, monospace; }

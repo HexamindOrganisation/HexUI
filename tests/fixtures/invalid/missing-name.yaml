@@ -1,0 +1,11 @@
+page:
+  layout_type: "grid"
+
+widgets:
+  - type: "button-group"
+    size:
+      width: 6
+      height: "auto"
+    buttons:
+      - label: "X"
+        action: "x"

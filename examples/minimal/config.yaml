@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=../../agent-ui.schema.json
+page:
+  main_color: "#2E86DE"
+  layout_type: "grid"
+
+widgets:
+  - name: "header"
+    type: "page-header"
+    position:
+      horizontal: "left"
+      vertical: "high"
+    size:
+      width: 12
+      height: "auto"
+    title: "My Dashboard"
+    subtitle: "agent-ui minimal example"
+
+  - name: "Quick actions"
+    type: "button-group"
+    position:
+      horizontal: "left"
+      vertical: "high"
+    size:
+      width: 12
+      height: "auto"
+    buttons:
+      - label: "Refresh"
+        action: "refresh_data"
+        variant: "default"
+      - label: "Settings"
+        action: "open_settings"
+        variant: "outline"
+      - label: "Delete all"
+        action: "delete_all"
+        variant: "destructive"
+
+  - name: "agent-output"
+    type: "ai-response"
+    position:
+      horizontal: "right"
+      vertical: "middle"
+    size:
+      width: 6
+      height: "auto"
+    empty_text: "Ask the agent something below."
+
+  - name: "Files"
+    type: "file-tree"
+    position:
+      horizontal: "left"
+      vertical: "middle"
+    size:
+      width: 6
+      height: 400
+    data_source:
+      action: "list_user_files"
+    on_select: "open_file"
+    file_actions:
+      - name: "Open"
+        action: "open_file"
+      - name: "Delete"
+        action: "delete_file"
+
+  - name: "chat-input"
+    type: "ai-chat-input"
+    position:
+      horizontal: "left"
+      vertical: "low"
+    size:
+      width: 12
+      height: "auto"
+    placeholder: "Ask the agent…"
+
+  - name: "footer"
+    type: "page-footer"
+    position:
+      horizontal: "left"
+      vertical: "low"
+    size:
+      width: 12
+      height: "auto"
+    text: "agent-ui · powered by shadcn"

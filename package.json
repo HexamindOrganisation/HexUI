@@ -1,0 +1,78 @@
+{
+  "name": "agent-ui",
+  "version": "0.1.0",
+  "description": "YAML-driven React UI for AI agents",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./style.css": "./dist/style.css",
+    "./shadcn.css": "./dist/shadcn.css",
+    "./tailwind-preset": "./dist/tailwind.preset.cjs"
+  },
+  "bin": {
+    "agent-ui": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "tailwind.preset.cjs",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json && node scripts/copy-styles.mjs",
+    "dev": "vite",
+    "example": "vite --config examples/minimal/vite.config.ts examples/minimal",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18",
+    "tailwindcss": ">=3.4 <4"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": { "optional": false }
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.5.0",
+    "tailwindcss-animate": "^1.0.7",
+    "yaml": "^2.4.0",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.23.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "jsdom": "^24.0.0",
+    "postcss": "^8.4.39",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.4.0",
+    "vite": "^5.3.0",
+    "vite-plugin-dts": "^3.9.0",
+    "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "react",
+    "yaml",
+    "agent",
+    "ui",
+    "ai"
+  ],
+  "license": "MIT"
+}
