@@ -231,7 +231,11 @@ warning. This is how widget isolation is preserved.
 `ai-history` is *not* a renderer of the live transcript — it's a clickable
 list of past conversations from a host data source. Selecting one calls
 `loadConversation(id, messages)`, which replaces the in-memory log; the
-`ai-response` widget then re-renders with the loaded messages.
+`ai-response` widget then re-renders with the loaded messages. The widget
+also renders a minimalist **"+ New chat"** button: clicking it invokes the
+optional `on_new_chat` action (so the host can create a conversation
+server-side), refreshes the data source, and calls `startNewConversation()`
+to clear the log.
 
 If your config has no `ai-response` widget, the agent's streaming output is
 still tracked in the conversation log (visible via `useConversation()`) but

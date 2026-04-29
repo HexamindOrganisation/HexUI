@@ -48,6 +48,8 @@ interface AgentUIContextValue {
    * Subsequent user submits and assistant replies append to the loaded log.
    */
   loadConversation: (id: string, messages: ConversationMessage[]) => void;
+  /** Clear the conversation log and deselect any loaded conversation. */
+  startNewConversation: () => void;
 }
 
 const AgentUIContext = createContext<AgentUIContextValue | null>(null);
@@ -98,6 +100,11 @@ export function AgentUIProvider({
     },
     [],
   );
+
+  const startNewConversation = useCallback(() => {
+    setSelectedConversationId(undefined);
+    setConversation([]);
+  }, []);
   const knownSet = useMemo(
     () => new Set(knownWidgetNames),
     [knownWidgetNames],
@@ -212,6 +219,7 @@ export function AgentUIProvider({
       ...(selectedConversationId !== undefined && { selectedConversationId }),
       pushUserMessage,
       loadConversation,
+      startNewConversation,
     }),
     [
       dispatcher,
@@ -221,6 +229,7 @@ export function AgentUIProvider({
       selectedConversationId,
       pushUserMessage,
       loadConversation,
+      startNewConversation,
     ],
   );
 
@@ -274,11 +283,13 @@ function useWidgetName(): string {
  */
 export function useWidgetData<T>(
   dataSource: DataSource | undefined,
-): { data: T | undefined; loading: boolean; error?: Error } {
+): { data: T | undefined; loading: boolean; error?: Error; refresh: () => void } {
   const { dispatcher } = useAgentUIContext();
   const [data, setData] = useState<T | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(!!dataSource);
   const [error, setError] = useState<Error | undefined>(undefined);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const refresh = useCallback(() => setRefreshTick((t) => t + 1), []);
 
   useEffect(() => {
     if (!dataSource) {
@@ -330,11 +341,12 @@ export function useWidgetData<T>(
     return () => {
       cancelled = true;
     };
-  }, [dataSource?.action, JSON.stringify(dataSource?.args), dataSource?.subscribe, dispatcher]);
+  }, [dataSource?.action, JSON.stringify(dataSource?.args), dataSource?.subscribe, dispatcher, refreshTick]);
 
-  const out: { data: T | undefined; loading: boolean; error?: Error } = {
+  const out: { data: T | undefined; loading: boolean; error?: Error; refresh: () => void } = {
     data,
     loading,
+    refresh,
   };
   if (error) out.error = error;
   return out;

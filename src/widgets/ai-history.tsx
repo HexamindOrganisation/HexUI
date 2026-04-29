@@ -15,11 +15,13 @@ export function AiHistoryWidgetComponent({
   props,
   dispatcher,
 }: WidgetProps<AiHistoryWidget>): JSX.Element {
-  const { data, loading, error } = useWidgetData<ConversationSummary[]>(
+  const { data, loading, error, refresh } = useWidgetData<ConversationSummary[]>(
     props.data_source,
   );
-  const { selectedConversationId, loadConversation } = useAgentUIContext();
+  const { selectedConversationId, loadConversation, startNewConversation } =
+    useAgentUIContext();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const conversations = data ?? props.conversations ?? [];
 
@@ -35,33 +37,73 @@ export function AiHistoryWidgetComponent({
     }
   };
 
+  const handleNewChat = async () => {
+    if (creating) return;
+    setCreating(true);
+    try {
+      if (props.on_new_chat) {
+        await dispatcher.invoke(props.on_new_chat, {});
+        refresh();
+      }
+      startNewConversation();
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const newChatButton = (
+    <button
+      type="button"
+      onClick={() => void handleNewChat()}
+      disabled={creating}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm",
+        "text-muted-foreground transition-colors hover:bg-primary/10 hover:text-foreground",
+        "disabled:cursor-wait disabled:opacity-60",
+      )}
+      aria-label="Start new chat"
+    >
+      <span aria-hidden="true" className="text-base leading-none">+</span>
+      <span>New chat</span>
+    </button>
+  );
+
   if (error) {
     return (
-      <div className="p-2 text-sm text-destructive">
-        Error: {error.message}
+      <div className="flex flex-col gap-1">
+        {newChatButton}
+        <div className="p-2 text-sm text-destructive">Error: {error.message}</div>
       </div>
     );
   }
   if (loading && conversations.length === 0) {
     return (
-      <div className="p-2 text-sm italic text-muted-foreground">Loading…</div>
+      <div className="flex flex-col gap-1">
+        {newChatButton}
+        <div className="p-2 text-sm italic text-muted-foreground">Loading…</div>
+      </div>
     );
   }
   if (conversations.length === 0) {
     return (
-      <div className="p-2 text-sm italic text-muted-foreground">
-        {props.empty_text ?? "No past conversations"}
+      <div className="flex flex-col gap-1">
+        {newChatButton}
+        <div className="p-2 text-sm italic text-muted-foreground">
+          {props.empty_text ?? "No past conversations"}
+        </div>
       </div>
     );
   }
 
   return (
-    <ul
-      className="m-0 flex max-h-[28rem] list-none flex-col gap-0.5 overflow-auto p-0"
-      role="listbox"
-      aria-label="Past conversations"
-    >
-      {conversations.map((c) => {
+    <div className="flex flex-col gap-1">
+      {newChatButton}
+      <ul
+        className="m-0 flex max-h-[28rem] list-none flex-col gap-0.5 overflow-auto p-0"
+        role="listbox"
+        aria-label="Past conversations"
+      >
+        {conversations.map((c) => {
         const isSelected = c.id === selectedConversationId;
         const isBusy = busyId === c.id;
         return (
@@ -93,7 +135,8 @@ export function AiHistoryWidgetComponent({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
 

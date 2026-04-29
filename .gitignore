@@ -4,3 +4,6 @@ dist
 *.log
 coverage
 .vite
+.venv
+__pycache__
+.claude

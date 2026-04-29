@@ -330,8 +330,21 @@ loaded conversation.
   conversations:                     # optional; static fallback when no data_source
     - { id: "c1", title: "Welcome chat" }
   on_select: "load_conversation"     # required; invoked with { id }
+  on_new_chat: "create_conversation" # optional; invoked when "+ New chat" is clicked
   empty_text: "No past conversations"   # optional
 ```
+
+A minimalist **"+ New chat"** button is rendered at the top of the widget in
+all states (empty, loading, error, populated). Clicking it:
+
+1. Invokes `dispatcher.invoke(on_new_chat)` if `on_new_chat` is set, so the
+   host can create a new conversation server-side.
+2. Refreshes the widget's data source so the new entry appears in the list
+   (host-side: emit via `dispatcher.subscribe` or set
+   `data_source.subscribe: true` and notify subscribers; otherwise the
+   widget re-invokes the data source action).
+3. Calls `startNewConversation()` on the runtime context, clearing the
+   in-memory log and deselecting the active row.
 
 ### `ConversationSummary` shape
 
@@ -401,9 +414,11 @@ To trigger conversation loading from your own widget:
 import { useAgentUIContext, type ConversationMessage } from "agent-ui";
 
 function MyConversationPicker() {
-  const { loadConversation } = useAgentUIContext();
-  // ...
+  const { loadConversation, startNewConversation } = useAgentUIContext();
+  // Load an existing conversation:
   loadConversation("conversation-id", messages);
+  // Or clear the log and start fresh:
+  startNewConversation();
 }
 ```
 

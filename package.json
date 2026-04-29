@@ -28,6 +28,7 @@
     "build": "vite build && tsc -p tsconfig.build.json && node scripts/copy-styles.mjs",
     "dev": "vite",
     "example": "vite --config examples/minimal/vite.config.ts examples/minimal",
+    "example:llm": "vite --config examples/llm/vite.config.ts examples/llm",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

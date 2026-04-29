@@ -160,12 +160,15 @@ YAML) or falls back to a one-shot `invoke`.
 import { useWidgetData } from "agent-ui";
 
 function MyWidget({ props }: WidgetProps<MySchema>) {
-  const { data, loading, error } = useWidgetData<Row[]>(props.data_source);
+  const { data, loading, error, refresh } = useWidgetData<Row[]>(props.data_source);
   if (error) return <div>Error: {error.message}</div>;
   if (loading && !data) return <div>Loading…</div>;
   return <table>…</table>;
 }
 ```
+
+The hook also returns `refresh()` — call it to re-run the data source on
+demand (e.g. after a mutation invoked from inside the widget).
 
 ### `useAgentInbox<T>()`
 

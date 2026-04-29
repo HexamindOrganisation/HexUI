@@ -1,9 +1,12 @@
 # yaml-language-server: $schema=../../agent-ui.schema.json
 page:
   layout_type: "grid"
+  # Curated palette: pick a mode + a single accent color. All other shadcn
+  # tokens (background, foreground, muted, border, …) stay at the values
+  # tuned for that mode.
   theme:
-    mode: "light"
-    accent: "#469BE5"
+    mode: "dark"           # "light" | "dark" | "system"
+    accent: "#469BE5"       # any hex — flows to --primary, --ring, focus rings, hovers
 
 widgets:
   - name: "header"
@@ -15,7 +18,7 @@ widgets:
       width: 12
       height: "auto"
     title: "My Dashboard"
-    subtitle: "agent-ui minimal example"
+    subtitle: "agent-ui llm example"
 
   - name: "Quick actions"
     type: "button-group"
@@ -73,7 +76,9 @@ widgets:
       height: "auto"
     data_source:
       action: "list_conversations"
+      subscribe: true
     on_select: "load_conversation"
+    on_new_chat: "create_conversation"
     empty_text: "No past conversations"
 
   - name: "chat-input"

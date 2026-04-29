@@ -24,6 +24,12 @@ export const AiHistoryWidgetSchema = z.object({
    * The result is loaded into the conversation log and rendered by ai-response.
    */
   on_select: ActionSchema,
+  /**
+   * Optional action invoked when the user clicks "New chat".
+   * Should create a new conversation on the host (returning its summary,
+   * which is appended to the list on the next refresh).
+   */
+  on_new_chat: ActionSchema.optional(),
   empty_text: z.string().optional(),
 });
 

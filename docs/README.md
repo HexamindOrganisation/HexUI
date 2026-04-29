@@ -90,14 +90,24 @@ optional bridge streams `token` / `message` / `status` / `tool-call` /
 | Validate configs in CI | [Getting started — CLI](./getting-started.md#cli) |
 | Look up a diagnostic code | [YAML reference — Diagnostics codes](./yaml-reference.md#diagnostics-codes) |
 
-## Example in this repo
+## Examples in this repo
 
-Run the minimal example:
+Two runnable examples live under [`examples/`](../examples):
+
+- [`examples/minimal`](../examples/minimal) — the seven native widgets driven
+  by a **mock dispatcher and echo agent**. No server needed.
+- [`examples/llm`](../examples/llm) — same UI wired to a small **FastAPI
+  backend** with an OpenAI-backed `/chat` endpoint and persisted
+  conversations. See [`examples/llm/backend/README.md`](../examples/llm/backend/README.md)
+  for setup.
+
+Run them:
 
 ```bash
 npm install
-npm run example
+npm run example       # mock — examples/minimal
+npm run example:llm   # backend-wired — examples/llm (start the FastAPI
+                      # server first, see its README)
 ```
 
-Opens http://localhost:5173/ with the seven native widgets driven by a mock
-dispatcher and a mock agent that echoes a greeting.
+Both open at http://localhost:5173/.
