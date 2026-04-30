@@ -106,18 +106,41 @@ serializable and snapshot-testable.
 
 ## Built-in widgets
 
-| `type`           | Purpose                                 |
-|------------------|-----------------------------------------|
-| `page-header`    | Title + optional subtitle/icon          |
-| `page-footer`    | Single-line footer                      |
-| `button-group`   | Row/column of action buttons (shadcn)   |
-| `file-tree`      | Recursive folder/file tree              |
-| `ai-chat-input`  | Textarea + send → AgentBridge           |
-| `ai-response`    | Streaming agent output (tokens + msgs)  |
-| `ai-history`     | Full conversation transcript            |
+| `type`           | Purpose                                       |
+|------------------|-----------------------------------------------|
+| `page-header`    | Title + optional subtitle/icon                |
+| `page-footer`    | Single-line footer                            |
+| `button-group`   | Row/column of action buttons (shadcn)         |
+| `file-tree`      | Recursive folder/file tree                    |
+| `ai-chat-input`  | Textarea + send → `AgentBridge`               |
+| `ai-response`    | Live chat transcript (user + agent + tokens)  |
+| `ai-history`     | List of past conversations                    |
+| `spacer`         | Empty cell — reserves layout space            |
+| `markdown`       | Renders markdown text safely (no HTML / no JS execution) |
+| `form`           | Schema-driven form → dispatcher action        |
 
 See [docs/widgets.md](./docs/widgets.md) for each widget's YAML schema and
 behavior.
+
+## Examples
+
+Three runnable examples live under [`examples/`](./examples):
+
+- [`examples/minimal`](./examples/minimal) — native widgets driven by a
+  mock dispatcher and echo agent. No server needed.
+- [`examples/llm`](./examples/llm) — same UI wired to a small FastAPI
+  backend with an OpenAI-backed `/chat` endpoint and persisted
+  conversations.
+- [`examples/layouts`](./examples/layouts) — the same five widgets rendered
+  under all four `layout_type`s (`grid`, `flex`, `sidebar`, `tabs`) with a
+  top-bar switcher.
+
+```bash
+npm install
+npm run example          # examples/minimal       (port 5173)
+npm run example:llm      # examples/llm           (port 5174 — start backend first)
+npm run example:layouts  # examples/layouts       (port 5175)
+```
 
 ## Custom widgets
 
@@ -152,8 +175,10 @@ import type { AgentBridge } from "agent-ui";
 const agent: AgentBridge = {
   async onUserSubmit(text) { /* kick off a turn */ },
   subscribeAgentOutput(cb) {
-    // emit { kind: "token", text } | { kind: "message", role, content } |
-    //      { kind: "status", state } | { kind: "tool-call", widget, payload } |
+    // emit { kind: "token", text, messageId? } |
+    //      { kind: "message", role, content, messageId? } |
+    //      { kind: "status", state: "idle" | "thinking" | "responding" } |
+    //      { kind: "tool-call", widget, payload } |
     //      { kind: "error", message }
     return () => { /* unsubscribe */ };
   },
