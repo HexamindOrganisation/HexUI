@@ -34,10 +34,19 @@ const conversationLog: { role: "user" | "assistant"; content: string }[] = [];
 // Subscribers interested in the conversation list. Notified whenever we
 // create a new conversation so the history widget refreshes immediately.
 const conversationListSubs = new Set<(d: unknown) => void>();
+// Subscribers interested in LLM usage metrics. Notified after every chat
+// request finishes so the metrics strip refreshes live.
+const metricsSubs = new Set<(d: unknown) => void>();
 
 async function fetchConversations(): Promise<unknown> {
   const res = await fetch(`${API}/conversations`);
   if (!res.ok) throw new Error(`list_conversations: ${res.status}`);
+  return res.json();
+}
+
+async function fetchMetrics(): Promise<unknown> {
+  const res = await fetch(`${API}/metrics`);
+  if (!res.ok) throw new Error(`get_metrics: ${res.status}`);
   return res.json();
 }
 
@@ -48,6 +57,16 @@ async function notifyConversationListChanged(): Promise<void> {
     conversationListSubs.forEach((cb) => cb(data));
   } catch {
     // best-effort; widgets keep their last good data
+  }
+}
+
+async function notifyMetricsChanged(): Promise<void> {
+  if (metricsSubs.size === 0) return;
+  try {
+    const data = await fetchMetrics();
+    metricsSubs.forEach((cb) => cb(data));
+  } catch {
+    // best-effort
   }
 }
 
@@ -80,6 +99,8 @@ const dispatcher: ActionDispatcher = {
         return;
       case "list_conversations":
         return fetchConversations();
+      case "get_metrics":
+        return fetchMetrics();
       case "load_conversation": {
         const { id } = args as { id: string };
         const res = await fetch(`${API}/conversations/${encodeURIComponent(id)}`);
@@ -105,16 +126,25 @@ const dispatcher: ActionDispatcher = {
     }
   },
   subscribe(action, _args, onData, onError) {
-    if (action !== "list_conversations") {
-      return () => {};
+    if (action === "list_conversations") {
+      conversationListSubs.add(onData);
+      fetchConversations()
+        .then((d) => onData(d))
+        .catch((e) => onError?.(e));
+      return () => {
+        conversationListSubs.delete(onData);
+      };
     }
-    conversationListSubs.add(onData);
-    fetchConversations()
-      .then((d) => onData(d))
-      .catch((e) => onError?.(e));
-    return () => {
-      conversationListSubs.delete(onData);
-    };
+    if (action === "get_metrics") {
+      metricsSubs.add(onData);
+      fetchMetrics()
+        .then((d) => onData(d))
+        .catch((e) => onError?.(e));
+      return () => {
+        metricsSubs.delete(onData);
+      };
+    }
+    return () => {};
   },
   has() {
     return true;
@@ -167,6 +197,8 @@ const agent: AgentBridge = {
       lastEmit?.({ kind: "status", state: "idle" });
       // Title/preview were updated server-side after the first user message.
       await notifyConversationListChanged();
+      // Token / cost / latency totals were updated server-side too.
+      await notifyMetricsChanged();
     } catch (err) {
       lastEmit?.({
         kind: "error",

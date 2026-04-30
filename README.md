@@ -118,6 +118,7 @@ serializable and snapshot-testable.
 | `spacer`         | Empty cell — reserves layout space            |
 | `markdown`       | Renders markdown text safely (no HTML / no JS execution) |
 | `form`           | Schema-driven form → dispatcher action        |
+| `metrics`        | Strip of stat cards bound to a data source    |
 
 See [docs/widgets.md](./docs/widgets.md) for each widget's YAML schema and
 behavior.

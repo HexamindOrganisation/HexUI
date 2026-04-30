@@ -5,6 +5,7 @@ Endpoints:
   - POST   /conversations           → create a new empty conversation
   - GET    /conversations/{id}      → messages for one conversation
   - POST   /chat                    → stream OpenAI completion; persists if conversation_id given
+  - GET    /metrics                 → cumulative LLM metrics for this server process
 """
 
 from __future__ import annotations
@@ -35,6 +36,46 @@ MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 def now_ms() -> int:
     return int(time.time() * 1000)
+
+
+# ----- Metrics tracking -------------------------------------------------------
+# Approximate per-1M-token USD pricing. Override via env if you care about
+# precision; this is good enough for an example dashboard.
+PRICING: dict[str, tuple[float, float]] = {
+    "gpt-4o-mini":  (0.15,  0.60),
+    "gpt-4o":       (2.50, 10.00),
+    "gpt-4-turbo": (10.00, 30.00),
+    "gpt-4":       (30.00, 60.00),
+}
+
+METRICS: dict[str, float] = {
+    "requests": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "cost_usd": 0.0,
+    "last_latency_ms": 0,
+    "last_prompt_tokens": 0,
+    "last_completion_tokens": 0,
+    "last_total_tokens": 0,
+}
+
+
+def _record_usage(usage: dict, latency_ms: int) -> None:
+    pt = int(usage.get("prompt_tokens") or 0)
+    ct = int(usage.get("completion_tokens") or 0)
+    tt = pt + ct
+    in_rate, out_rate = PRICING.get(MODEL, PRICING["gpt-4o-mini"])
+    cost = (pt * in_rate + ct * out_rate) / 1_000_000
+    METRICS["requests"] = int(METRICS["requests"]) + 1
+    METRICS["prompt_tokens"] = int(METRICS["prompt_tokens"]) + pt
+    METRICS["completion_tokens"] = int(METRICS["completion_tokens"]) + ct
+    METRICS["total_tokens"] = int(METRICS["total_tokens"]) + tt
+    METRICS["cost_usd"] = float(METRICS["cost_usd"]) + cost
+    METRICS["last_latency_ms"] = latency_ms
+    METRICS["last_prompt_tokens"] = pt
+    METRICS["last_completion_tokens"] = ct
+    METRICS["last_total_tokens"] = tt
 
 
 CONVERSATIONS: dict[str, dict] = {
@@ -124,17 +165,28 @@ async def chat(req: ChatRequest) -> StreamingResponse:
                 summary["title"] = last.content[:48] or "New chat"
 
     async def stream() -> AsyncIterator[str]:
+        started = time.perf_counter()
         completion = await client.chat.completions.create(
             model=MODEL,
             messages=[m.model_dump() for m in req.messages],
             stream=True,
+            stream_options={"include_usage": True},
         )
         full = ""
+        usage: dict = {}
         async for chunk in completion:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                full += delta
-                yield delta
+            # The terminal chunk from `include_usage` carries empty `choices`
+            # and a populated `usage` field.
+            if getattr(chunk, "usage", None) is not None:
+                usage = chunk.usage.model_dump()
+            if chunk.choices:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    full += delta
+                    yield delta
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        if usage:
+            _record_usage(usage, latency_ms)
         if convo is not None:
             convo["messages"].append(
                 {
@@ -145,3 +197,30 @@ async def chat(req: ChatRequest) -> StreamingResponse:
             )
 
     return StreamingResponse(stream(), media_type="text/plain")
+
+
+@app.get("/metrics")
+def get_metrics() -> dict:
+    """Cumulative LLM metrics. Each cell can be a primitive or
+    `{ value, delta?, hint? }` — see the agent-ui `metrics` widget docs."""
+    last_tt = int(METRICS["last_total_tokens"])
+    last_lat = int(METRICS["last_latency_ms"])
+    return {
+        "requests": int(METRICS["requests"]),
+        "total_tokens": (
+            {
+                "value": int(METRICS["total_tokens"]),
+                "delta": last_tt or None,
+                "hint": "last request" if last_tt else "no requests yet",
+            }
+        ),
+        "cost": {
+            "value": round(float(METRICS["cost_usd"]), 6),
+            "hint": f"USD · {MODEL}",
+        },
+        "latency": (
+            {"value": last_lat, "hint": "last request"}
+            if last_lat
+            else {"value": 0, "hint": "no requests yet"}
+        ),
+    }

@@ -25,6 +25,7 @@ custom widgets, see [extending.md](./extending.md).
 | `spacer`         | Empty cell — reserves layout space   | yes        | main   |
 | `markdown`       | Renders markdown text safely         | no         | main   |
 | `form`           | Schema-driven form → dispatcher      | no         | main   |
+| `metrics`        | Strip of stat cards from a data source | no       | main   |
 
 **Chromeless** widgets opt out of the default `<div class="au-widget-host">`
 border/padding so they sit flush with the page edges.
@@ -643,6 +644,95 @@ an `Error` with a useful message and the form will surface it.
 
 ---
 
+## `metrics`
+
+Horizontal strip of stat cards. Each cell shows a label, a formatted value,
+and (optionally) a delta indicator and a hint line. Values come from a
+`data_source` action; if the action also supports `subscribe: true`, the
+strip updates live.
+
+### YAML
+
+```yaml
+- name: "stats"
+  type: "metrics"
+  size: { width: 12, height: "auto" }
+  data_source:
+    action: "get_session_metrics"
+    subscribe: true                 # optional; live updates if dispatcher.subscribe
+  columns: 4                        # optional: 1–6 (otherwise wraps via flex)
+  metrics:
+    - id: "tokens"
+      label: "Tokens"
+      format: "number"
+    - id: "cost"
+      label: "Cost"
+      format: "currency"
+      precision: 4
+    - id: "latency"
+      label: "p95 latency"
+      format: "duration"
+    - id: "success"
+      label: "Success rate"
+      format: "percent"
+      precision: 1
+```
+
+### Dispatcher payload
+
+The action returns a record keyed by each metric's `id`. Each value can be
+a primitive or an object with optional `delta` / `hint`:
+
+```ts
+type MetricsPayload = Record<string, number | string | {
+  value: number | string;
+  delta?: number;     // ▲ green for > 0, ▼ rose for < 0; 0 hides the badge
+  hint?: string;      // muted second line on the card
+}>;
+```
+
+Example return value matching the YAML above:
+
+```ts
+{
+  tokens: { value: 18420, delta: 1240, hint: "this session" },
+  cost: 0.0732,
+  latency: { value: 312, hint: "rolling 5 min" },
+  success: { value: 0.973, delta: 0.014 },
+}
+```
+
+Cells without a corresponding key in the payload render as `—`.
+
+### Format types
+
+| `format`    | Input shape                         | Renders as                  |
+|-------------|-------------------------------------|-----------------------------|
+| `number`    | number                              | `1,234.56` (locale-aware)   |
+| `percent`   | number                              | `0.42` → `42.0%` (or `42` → `42%` if already > 1) |
+| `currency`  | number                              | `$1,234.56` (use `prefix` to override symbol) |
+| `duration`  | number of milliseconds              | `850μs` / `42ms` / `3.20s` / `1m 12s` / `2h 5m` |
+| `bytes`     | number of bytes                     | `1.5 MB` / `820 KB`         |
+| `string`    | string                              | as-is, with prefix/suffix   |
+
+`precision` controls decimal places for numeric formats. `prefix` and
+`suffix` wrap the formatted value (e.g. `prefix: "≈ "`, `suffix: " req/s"`).
+
+### Layout
+
+- `columns: N` — fixed grid (1–6 columns on wide screens, gracefully
+  collapsing on narrow viewports).
+- omitted — flex wraps with `min-w: 120px` per cell.
+
+### States
+
+- No `data_source` → renders `empty_text` (or "No data_source configured.").
+- `data_source` loading and no payload yet → renders `loading_text` (or
+  "Loading metrics…").
+- `data_source` errored → renders the error message in muted destructive text.
+
+---
+
 ## Tool-call routing (any widget)
 
 The `AgentBridge` can push a typed payload directly to any widget by name:
@@ -670,7 +760,7 @@ The two widgets that already wire this up are:
 
 ## Combining widgets — recipe
 
-A typical "agent dashboard" assembles all 7 widgets:
+A typical "agent dashboard" assembles the chat-oriented widgets together:
 
 ```yaml
 page:

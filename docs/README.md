@@ -97,8 +97,10 @@ Three runnable examples live under [`examples/`](../examples):
 - [`examples/minimal`](../examples/minimal) — the native widgets driven
   by a **mock dispatcher and echo agent**. No server needed.
 - [`examples/llm`](../examples/llm) — same UI wired to a small **FastAPI
-  backend** with an OpenAI-backed `/chat` endpoint and persisted
-  conversations. See [`examples/llm/backend/README.md`](../examples/llm/backend/README.md)
+  backend** with an OpenAI-backed `/chat` endpoint, persisted
+  conversations, and a live `metrics` strip (requests / tokens / cost /
+  last-request latency) sourced from `/metrics`. See
+  [`examples/llm/backend/README.md`](../examples/llm/backend/README.md)
   for setup.
 - [`examples/layouts`](../examples/layouts) — the **same five widgets**
   (`page-header`, `markdown`, `form`, `button-group`, `page-footer`)

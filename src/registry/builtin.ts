@@ -10,6 +10,7 @@ import {
   SpacerWidgetSchema,
   MarkdownWidgetSchema,
   FormWidgetSchema,
+  MetricsWidgetSchema,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
 import { FileTreeWidgetComponent } from "../widgets/file-tree.js";
@@ -21,6 +22,7 @@ import { AiHistoryWidgetComponent } from "../widgets/ai-history.js";
 import { SpacerWidgetComponent } from "../widgets/spacer.js";
 import { MarkdownWidgetComponent } from "../widgets/markdown.js";
 import { FormWidgetComponent } from "../widgets/form.js";
+import { MetricsWidgetComponent } from "../widgets/metrics.js";
 import type { AnyWidgetDefinition } from "./types.js";
 
 export const builtinWidgets: AnyWidgetDefinition[] = [
@@ -80,5 +82,10 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     type: "form",
     schema: FormWidgetSchema,
     component: FormWidgetComponent,
+  }),
+  defineWidget({
+    type: "metrics",
+    schema: MetricsWidgetSchema,
+    component: MetricsWidgetComponent,
   }),
 ];

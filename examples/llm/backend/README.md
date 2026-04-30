@@ -30,8 +30,16 @@ npm run example:llm
   `{ "messages": [...], "conversation_id": "..." }`. When
   `conversation_id` is provided, the user message and final assistant
   reply are appended to that conversation, and its title/preview are
-  updated from the first user message.
+  updated from the first user message. Each call is timed and its
+  token usage folded into the running totals exposed at `/metrics`.
+- `GET  /metrics` — cumulative LLM metrics for this server process
+  (matches the `get_metrics` action). Returns `{ requests, total_tokens,
+  cost, latency }` in the shape the agent-ui `metrics` widget expects
+  (primitives or `{ value, delta?, hint? }`). Cost is a rough estimate
+  derived from a small per-1M-token pricing table keyed by
+  `OPENAI_MODEL`.
 
 ## Notes
 
-The store is in-memory only — restarting the server resets everything.
+The store and metrics are in-memory only — restarting the server resets
+everything.

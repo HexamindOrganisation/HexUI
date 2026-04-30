@@ -39,6 +39,34 @@ widgets:
         action: "delete_all"
         variant: "destructive"
 
+  - name: "metrics"
+    type: "metrics"
+    position:
+      horizontal: "left"
+      vertical: "high"
+    size:
+      width: 12
+      height: "auto"
+    data_source:
+      action: "get_metrics"
+      subscribe: true
+    columns: 4
+    loading_text: "Waiting for the first request…"
+    metrics:
+      - id: "requests"
+        label: "Requests"
+        format: "number"
+      - id: "total_tokens"
+        label: "Total tokens"
+        format: "number"
+      - id: "cost"
+        label: "Cost"
+        format: "currency"
+        precision: 4
+      - id: "latency"
+        label: "Last latency"
+        format: "duration"
+
   - name: "Files"
     type: "file-tree"
     position:

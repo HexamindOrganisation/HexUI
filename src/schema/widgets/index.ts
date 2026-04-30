@@ -46,6 +46,14 @@ export {
   FormFieldSchema,
   type FormField,
 } from "./form.js";
+export {
+  MetricsWidgetSchema,
+  type MetricsWidget,
+  MetricSpecSchema,
+  type MetricSpec,
+  MetricFormatSchema,
+  type MetricFormat,
+} from "./metrics.js";
 
 import { ButtonGroupWidgetSchema } from "./button-group.js";
 import { FileTreeWidgetSchema } from "./file-tree.js";
@@ -57,6 +65,7 @@ import { AiHistoryWidgetSchema } from "./ai-history.js";
 import { SpacerWidgetSchema } from "./spacer.js";
 import { MarkdownWidgetSchema } from "./markdown.js";
 import { FormWidgetSchema } from "./form.js";
+import { MetricsWidgetSchema } from "./metrics.js";
 import { z } from "zod";
 
 export const BuiltinWidgetSchemas = {
@@ -70,6 +79,7 @@ export const BuiltinWidgetSchemas = {
   spacer: SpacerWidgetSchema,
   markdown: MarkdownWidgetSchema,
   form: FormWidgetSchema,
+  metrics: MetricsWidgetSchema,
 } as const;
 
 export type BuiltinWidgetType = keyof typeof BuiltinWidgetSchemas;
@@ -86,6 +96,7 @@ export const BuiltinWidgetUnion = z.discriminatedUnion("type", [
   SpacerWidgetSchema,
   MarkdownWidgetSchema,
   FormWidgetSchema,
+  MetricsWidgetSchema,
 ]);
 
 export type BuiltinWidget = z.infer<typeof BuiltinWidgetUnion>;
