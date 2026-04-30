@@ -23,6 +23,7 @@ custom widgets, see [extending.md](./extending.md).
 | `ai-response`    | Live chat transcript (user + agent)  | yes        | main   |
 | `ai-history`     | List of past conversations           | yes        | main   |
 | `spacer`         | Empty cell — reserves layout space   | yes        | main   |
+| `markdown`       | Renders markdown text safely         | no         | main   |
 
 **Chromeless** widgets opt out of the default `<div class="au-widget-host">`
 border/padding so they sit flush with the page edges.
@@ -456,6 +457,73 @@ with the `width` and `height` you give it. Common patterns:
 
 It honors all the standard widget-base fields (`name`, `position`, `size`,
 `tab`) and nothing else.
+
+---
+
+## `markdown`
+
+Renders a string of markdown as styled, **safe** rich text. Useful for help
+panels, release notes, model-system-card displays, or piping a long-form
+LLM answer through a dispatcher action and showing it formatted.
+
+### YAML
+
+```yaml
+# Inline content:
+- name: "help"
+  type: "markdown"
+  size: { width: 6, height: "auto" }
+  content: |
+    ## Quick start
+    Type a message below and hit **send**.
+    See [the docs](https://example.com/docs).
+
+# Or bound to a dispatcher action returning a string:
+- name: "release-notes"
+  type: "markdown"
+  data_source: { action: "fetch_release_notes", subscribe: false }
+  empty_text: "No notes yet."
+```
+
+### Fields
+
+| Field         | Type                | Notes |
+|---------------|---------------------|-------|
+| `content`     | string              | Inline markdown source. |
+| `data_source` | `DataSource`        | Fetched via the dispatcher; resolved value must be a string. |
+| `empty_text`  | string              | Shown while loading or when the source is empty. |
+
+`content` and `data_source` are mutually exclusive — provide one.
+
+### Supported markdown
+
+Headings (`#`–`######`), paragraphs, **bold**, *italic*, `inline code`,
+fenced code blocks (```` ``` ````), bullet/ordered lists, blockquotes,
+horizontal rules, and links.
+
+### Security
+
+The renderer is **safe by construction**:
+
+- Output is React nodes only — no `dangerouslySetInnerHTML`. React's
+  text-escaping is the security boundary, so any text in the source becomes
+  literal text in the DOM.
+- Raw HTML in the markdown source is **not** parsed; it renders as plain
+  text (e.g. `<script>` shows up as the literal string).
+- Code blocks are display-only — they never execute. The optional
+  `lang` after the opening fence is exposed as a `data-language` attribute
+  for syntax-highlighting plugins, but no JS runs.
+- Link URLs are scheme-validated. Only `http:`, `https:`, `mailto:`, and
+  relative URLs (`/`, `#`, `?`, `./`, `../`) are emitted as `<a href>`. Any
+  other scheme — `javascript:`, `data:`, `vbscript:`, `file:`, etc. — is
+  rejected and the link label is rendered as plain text.
+- All emitted links use `target="_blank"` with `rel="noopener noreferrer nofollow"`.
+- No images, no inline HTML attributes, no event handlers — there is no
+  surface to attach JavaScript to.
+
+If you need richer features (tables, images, syntax highlighting, GFM),
+register a custom widget that wraps a vetted library like `react-markdown`
+with `rehype-sanitize`.
 
 ---
 

@@ -6,3 +6,4 @@ export { AiChatInputWidgetComponent } from "./ai-chat-input.js";
 export { AiResponseWidgetComponent } from "./ai-response.js";
 export { AiHistoryWidgetComponent } from "./ai-history.js";
 export { SpacerWidgetComponent } from "./spacer.js";
+export { MarkdownWidgetComponent } from "./markdown.js";

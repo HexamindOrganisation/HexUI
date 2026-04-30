@@ -8,6 +8,7 @@ import {
   AiResponseWidgetSchema,
   AiHistoryWidgetSchema,
   SpacerWidgetSchema,
+  MarkdownWidgetSchema,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
 import { FileTreeWidgetComponent } from "../widgets/file-tree.js";
@@ -17,6 +18,7 @@ import { AiChatInputWidgetComponent } from "../widgets/ai-chat-input.js";
 import { AiResponseWidgetComponent } from "../widgets/ai-response.js";
 import { AiHistoryWidgetComponent } from "../widgets/ai-history.js";
 import { SpacerWidgetComponent } from "../widgets/spacer.js";
+import { MarkdownWidgetComponent } from "../widgets/markdown.js";
 import type { AnyWidgetDefinition } from "./types.js";
 
 export const builtinWidgets: AnyWidgetDefinition[] = [
@@ -66,5 +68,10 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     schema: SpacerWidgetSchema,
     component: SpacerWidgetComponent,
     chromeless: true,
+  }),
+  defineWidget({
+    type: "markdown",
+    schema: MarkdownWidgetSchema,
+    component: MarkdownWidgetComponent,
   }),
 ];

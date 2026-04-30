@@ -39,6 +39,7 @@ export {
   type ConversationSummary,
 } from "./ai-history.js";
 export { SpacerWidgetSchema, type SpacerWidget } from "./spacer.js";
+export { MarkdownWidgetSchema, type MarkdownWidget } from "./markdown.js";
 
 import { ButtonGroupWidgetSchema } from "./button-group.js";
 import { FileTreeWidgetSchema } from "./file-tree.js";
@@ -48,6 +49,7 @@ import { AiChatInputWidgetSchema } from "./ai-chat-input.js";
 import { AiResponseWidgetSchema } from "./ai-response.js";
 import { AiHistoryWidgetSchema } from "./ai-history.js";
 import { SpacerWidgetSchema } from "./spacer.js";
+import { MarkdownWidgetSchema } from "./markdown.js";
 import { z } from "zod";
 
 export const BuiltinWidgetSchemas = {
@@ -59,6 +61,7 @@ export const BuiltinWidgetSchemas = {
   "ai-response": AiResponseWidgetSchema,
   "ai-history": AiHistoryWidgetSchema,
   spacer: SpacerWidgetSchema,
+  markdown: MarkdownWidgetSchema,
 } as const;
 
 export type BuiltinWidgetType = keyof typeof BuiltinWidgetSchemas;
@@ -73,6 +76,7 @@ export const BuiltinWidgetUnion = z.discriminatedUnion("type", [
   AiResponseWidgetSchema,
   AiHistoryWidgetSchema,
   SpacerWidgetSchema,
+  MarkdownWidgetSchema,
 ]);
 
 export type BuiltinWidget = z.infer<typeof BuiltinWidgetUnion>;
