@@ -102,6 +102,11 @@ widgets can opt into the same behavior — see
 
 ## Layouts
 
+> **See it side-by-side:** [`examples/layouts`](../examples/layouts) renders
+> the **same five widgets** under all four layouts with a top-bar switcher —
+> the fastest way to feel how `layout_type` reshapes a page. Run it with
+> `npm run example:layouts`.
+
 ### `layout_type: grid`
 
 Twelve-column CSS grid, packed top-down/left-to-right with `position` biases.

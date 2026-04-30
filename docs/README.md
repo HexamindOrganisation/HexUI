@@ -92,22 +92,26 @@ optional bridge streams `token` / `message` / `status` / `tool-call` /
 
 ## Examples in this repo
 
-Two runnable examples live under [`examples/`](../examples):
+Three runnable examples live under [`examples/`](../examples):
 
-- [`examples/minimal`](../examples/minimal) — the seven native widgets driven
+- [`examples/minimal`](../examples/minimal) — the native widgets driven
   by a **mock dispatcher and echo agent**. No server needed.
 - [`examples/llm`](../examples/llm) — same UI wired to a small **FastAPI
   backend** with an OpenAI-backed `/chat` endpoint and persisted
   conversations. See [`examples/llm/backend/README.md`](../examples/llm/backend/README.md)
   for setup.
+- [`examples/layouts`](../examples/layouts) — the **same five widgets**
+  (`page-header`, `markdown`, `form`, `button-group`, `page-footer`)
+  rendered under all four `layout_type`s (`grid`, `flex`, `sidebar`,
+  `tabs`). One React app, four YAML configs, a top-bar switcher. Stub
+  dispatcher logs every action to the console — no backend.
 
 Run them:
 
 ```bash
 npm install
-npm run example       # mock — examples/minimal
-npm run example:llm   # backend-wired — examples/llm (start the FastAPI
-                      # server first, see its README)
+npm run example          # mock — examples/minimal       (port 5173)
+npm run example:llm      # backend-wired — examples/llm  (port 5174,
+                         # start the FastAPI server first, see its README)
+npm run example:layouts  # layout showcase — examples/layouts (port 5175)
 ```
-
-Both open at http://localhost:5173/.
