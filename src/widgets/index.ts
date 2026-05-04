@@ -9,3 +9,4 @@ export { SpacerWidgetComponent } from "./spacer.js";
 export { MarkdownWidgetComponent } from "./markdown.js";
 export { FormWidgetComponent } from "./form.js";
 export { MetricsWidgetComponent } from "./metrics.js";
+export { TableWidgetComponent } from "./table.js";

@@ -26,6 +26,7 @@ custom widgets, see [extending.md](./extending.md).
 | `markdown`       | Renders markdown text safely         | no         | main   |
 | `form`           | Schema-driven form → dispatcher      | no         | main   |
 | `metrics`        | Strip of stat cards from a data source | no       | main   |
+| `table`          | Scrollable CSV table (head/tail rows)  | no         | main   |
 
 **Chromeless** widgets opt out of the default `<div class="au-widget-host">`
 border/padding so they sit flush with the page edges.
@@ -729,6 +730,93 @@ Cells without a corresponding key in the payload render as `—`.
 - No `data_source` → renders `empty_text` (or "No data_source configured.").
 - `data_source` loading and no payload yet → renders `loading_text` (or
   "Loading metrics…").
+- `data_source` errored → renders the error message in muted destructive text.
+
+---
+
+## `table`
+
+Scrollable table that renders a CSV. The CSV can be inline or fetched from a
+dispatcher action. A `mode` (`head` | `tail`) and `rows` parameter limit how
+many data rows are displayed.
+
+### YAML
+
+```yaml
+# Inline CSV:
+- name: "preview"
+  type: "table"
+  size: { width: 12, height: 320 }
+  content: |
+    name,role,joined
+    Ada,engineer,2024-03-01
+    Linus,maintainer,2023-11-12
+    Grace,architect,2022-06-30
+  mode: "head"        # optional: "head" (default) | "tail"
+  rows: 20            # optional: number of data rows to show, default 20
+  has_header: true    # optional: treat first row as header, default true
+  delimiter: ","      # optional: single-char delimiter; auto-detected by default
+
+# Or bound to a dispatcher action returning a CSV string:
+- name: "logs"
+  type: "table"
+  size: { width: 12, height: 400 }
+  data_source:
+    action: "load_logs_csv"
+    args: { path: "/var/log/app.csv" }
+    subscribe: false
+  mode: "tail"
+  rows: 50
+  empty_text: "No log rows yet."
+```
+
+### Fields
+
+| Field          | Type                          | Notes |
+|----------------|-------------------------------|-------|
+| `content`      | string                        | Inline CSV text. Ignored when `data_source` is set. |
+| `data_source`  | `DataSource`                  | Returns CSV. See "Payload shapes". |
+| `mode`         | `"head"` \| `"tail"`          | Take rows from the start or end. Defaults to `"head"`. |
+| `rows`         | integer (1–10000)             | Number of data rows shown. Defaults to `20`. The header row, if any, is always shown and does not count toward this limit. |
+| `delimiter`    | single character              | CSV delimiter. Defaults to auto-detect among `,`, `;`, `\t`, `\|`. |
+| `has_header`   | boolean                       | Treat the first row as a sticky header. Defaults to `true`. |
+| `empty_text`   | string                        | Shown when no source is configured or the payload is empty. |
+| `loading_text` | string                        | Shown while `data_source` is loading and no payload has arrived. |
+
+> **Note:** `rows` is named distinctly from the widget-base layout `size`,
+> which controls the cell footprint. Use `size.height` to make the table
+> visibly scrollable (the rows scroll inside the configured height; the
+> header stays pinned).
+
+### Payload shapes
+
+The dispatcher action may return any of:
+
+- A CSV string: `"a,b,c\n1,2,3\n4,5,6"`
+- An object: `{ csv: "a,b,c\n…" }`
+- A 2D array of rows: `[["a","b","c"],["1","2","3"]]` — already parsed.
+  When supplied this way, `delimiter` is ignored.
+
+### Parsing
+
+The built-in CSV parser is RFC 4180–style: it supports quoted fields,
+embedded delimiters, embedded newlines, and `""` as an escaped quote.
+Carriage returns (`\r`) are stripped. Trailing empty lines are ignored.
+
+### Layout
+
+- The widget renders inside its layout cell. Use `size.height: <pixels>`
+  to make it scroll. With `height: "auto"`, the table grows to fit all
+  selected rows and only scrolls horizontally if needed.
+- The header (when `has_header` is true) sticks to the top of the scroll
+  container.
+- A small footer line shows `Showing N of M rows (head|tail)`.
+
+### States
+
+- No `content` and no `data_source` → renders `empty_text` (or "No data.").
+- `data_source` loading and no payload yet → renders `loading_text`
+  (or "Loading table…").
 - `data_source` errored → renders the error message in muted destructive text.
 
 ---

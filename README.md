@@ -119,6 +119,7 @@ serializable and snapshot-testable.
 | `markdown`       | Renders markdown text safely (no HTML / no JS execution) |
 | `form`           | Schema-driven form → dispatcher action        |
 | `metrics`        | Strip of stat cards bound to a data source    |
+| `table`          | Scrollable CSV table (head/tail rows)         |
 
 See [docs/widgets.md](./docs/widgets.md) for each widget's YAML schema and
 behavior.
