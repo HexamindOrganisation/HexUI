@@ -62,7 +62,7 @@ without revisiting the spec.
      |
   [1] parse       — yaml (eemeli/yaml, preserves line/col)
      |
-  [2] validate    — Zod                     (unknown → Config)
+  [2] validate    — Ajv (JSON Schema)       (unknown → Config)
      |
   [3] resolve     — registry + dispatcher   (Config → ResolvedConfig + Diagnostic[])
      |
@@ -90,7 +90,7 @@ React reconciles.
 ```
 agent-ui/
 ├── src/
-│   ├── schema/          # Zod schemas + inferred types
+│   ├── schema/          # JSON Schemas + FromSchema-inferred types
 │   │   ├── page.ts
 │   │   ├── widgets/     # one file per built-in widget schema
 │   │   ├── common.ts    # Position, Size, Action, Icon
@@ -450,8 +450,8 @@ inbox.
 ## 11. Error Handling
 
 - Stages 1–5 return `Result<T, Diagnostic[]>`. No throws inside the pipeline.
-- Zod errors map to `Diagnostic[]` with YAML source locations (line/col tracked
-  during parse via eemeli/yaml).
+- Ajv errors map to `Diagnostic[]` (codes prefixed `ajv.*`) with YAML source
+  locations (line/col tracked during parse via eemeli/yaml).
 - Dev mode (`diagnostics: "overlay"`): renders a dismissible overlay listing
   all diagnostics with code frames.
 - Prod mode: minimal "config error" block; never blank-screen the host.
@@ -523,18 +523,18 @@ Total estimate: **~5–7 weeks** for a solid v0.1, solo.
 
 ### Phase 1 — Schema & parse pipeline (3–5 days)
 - `yaml` integration with line/col tracking.
-- Zod schemas: `Position`, `Size`, `Action`, `Icon`, `Page`, `MainMenuItem`,
+- JSON Schemas: `Position`, `Size`, `Action`, `Icon`, `Page`, `MainMenuItem`,
   base `Widget`.
 - Fixture runner.
-- `Diagnostic` type + ZodError → Diagnostic mapper.
+- `Diagnostic` type + Ajv `ErrorObject[]` → Diagnostic mapper.
 
 **Exit:** every fixture parses to either a typed `Config` or an exact
 diagnostic list. No widgets yet.
 
 ### Phase 2 — Widget registry + resolver (2–3 days)
-- `defineWidget()` API with its own Zod schema per widget.
+- `defineWidget()` API with its own JSON Schema per widget (precompiled by Ajv).
 - `WidgetRegistry` class (built-ins + extensions).
-- Discriminated union built dynamically from registry.
+- `oneOf` union built dynamically from registry.
 - Resolver: cross-check `widget.type` against registry; cross-check every
   `action` against `dispatcher.has()` (when provided).
 

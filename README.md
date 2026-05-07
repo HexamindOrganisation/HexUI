@@ -94,7 +94,7 @@ npx agent-ui emit-schema          # prints JSON Schema
 ## Architecture
 
 1. **parse** YAML → data + source map
-2. **validate** with Zod discriminated unions
+2. **validate** with JSON Schema (Ajv) — `oneOf` + `const` discriminator per widget type
 3. **resolve** against the widget registry + dispatcher
 4. **normalize** defaults
 5. **compile** layout math → `RenderPlan`

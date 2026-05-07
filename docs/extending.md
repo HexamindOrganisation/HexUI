@@ -73,7 +73,7 @@ export function App() {
 - Use `as const` so `FromSchema` can infer literal types for `const`/`enum`
   values. Without it you get widened `string`/`number`.
 - Set `additionalProperties: false` to silently strip unknown keys
-  (Zod's default `.strip()` behavior).
+  combined with Ajv's `removeAdditional: true`.
 - **Caveat:** if your schema uses `oneOf` (e.g. for a discriminated union of
   variants), do **not** set `additionalProperties: false` on each branch —
   Ajv strips properties between branch attempts and breaks the discriminator.
