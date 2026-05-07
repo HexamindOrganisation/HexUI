@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { Diagnostic, Result } from "../diagnostics/types.js";
 import { ok, err } from "../diagnostics/types.js";
 import type { WidgetRegistry } from "../registry/register.js";
@@ -9,7 +8,8 @@ import type { Page } from "../schema/page.js";
 import type { Position, Size } from "../schema/common.js";
 import type { SourceMap } from "./parse.js";
 import { PageSchema } from "../schema/page.js";
-import { zodErrorToDiagnostics } from "../diagnostics/zod.js";
+import { compileSchema } from "../schema/ajv.js";
+import { ajvErrorsToDiagnostics } from "../diagnostics/ajv.js";
 import { PlaceholderWidget } from "../widgets/placeholder.js";
 
 export interface ResolvedWidget {
@@ -38,6 +38,13 @@ export interface ResolveOptions {
   registry: WidgetRegistry;
   dispatcher?: ActionDispatcher;
   locate?: SourceMap;
+}
+
+// Compile the Page schema once, lazily.
+let pageValidator: ReturnType<typeof compileSchema> | null = null;
+function getPageValidator(): ReturnType<typeof compileSchema> {
+  if (!pageValidator) pageValidator = compileSchema(PageSchema);
+  return pageValidator;
 }
 
 /**
@@ -69,17 +76,15 @@ export function resolve(
 
   const root = raw as { page?: unknown; widgets?: unknown };
 
-  const pageResult = PageSchema.safeParse(root.page);
-  if (!pageResult.success) {
+  const validatePage = getPageValidator();
+  const pageCandidate = structuredClone(root.page) as object;
+  if (!validatePage(pageCandidate)) {
     diagnostics.push(
-      ...zodErrorToDiagnostics(pageResult.error, opts.locate).map((d) => ({
-        ...d,
-        path: ["page", ...d.path],
-      })),
+      ...ajvErrorsToDiagnostics(validatePage.errors, ["page"], opts.locate),
     );
     return err(diagnostics);
   }
-  const page = pageResult.data;
+  const page = pageCandidate as Page;
 
   const rawWidgets = Array.isArray(root.widgets) ? root.widgets : [];
   const resolved: ResolvedWidget[] = [];
@@ -168,18 +173,21 @@ export function resolve(
     const merged = def.defaults
       ? { ...def.defaults, ...(item as object) }
       : item;
-    const parsed = def.schema.safeParse(merged);
-    if (!parsed.success) {
+    // Ajv mutates input in place (defaults / removeAdditional). Clone so the
+    // caller's input isn't surprised.
+    const candidate = structuredClone(merged) as object;
+    if (!def.validate(candidate)) {
       diagnostics.push(
-        ...zodErrorToDiagnostics(parsed.error, opts.locate).map((d) => ({
-          ...d,
-          path: ["widgets", idx, ...d.path],
-        })),
+        ...ajvErrorsToDiagnostics(
+          def.validate.errors,
+          ["widgets", idx],
+          opts.locate,
+        ),
       );
       return;
     }
 
-    const data = parsed.data as {
+    const data = candidate as {
       name: string;
       type: string;
       position?: Position;
@@ -274,6 +282,3 @@ function collectActionNames(
   }
   return out;
 }
-
-// re-export z for side-effect free typing if desired
-export type { z };

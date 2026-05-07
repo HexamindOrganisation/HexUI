@@ -197,7 +197,7 @@ live updates. Otherwise it's a one-shot `invoke` when the widget mounts.
 | Code | Meaning |
 |---|---|
 | `yaml.parse` | The YAML itself is malformed |
-| `zod.*` | A field is the wrong shape / type / missing |
+| `ajv.*` | A field is the wrong shape / type / missing (e.g. `ajv.required`, `ajv.enum`, `ajv.maximum`) |
 | `resolve.missing-name` / `resolve.missing-type` | Widget is missing its discriminator fields |
 | `resolve.duplicate-name` | Two widgets share the same `name` |
 | `resolve.unknown-type` | The widget `type` isn't registered (renders a placeholder) |

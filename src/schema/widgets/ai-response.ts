@@ -1,13 +1,18 @@
-import { z } from "zod";
-import { WidgetBaseShape } from "../widget-base.js";
+import type { FromSchema } from "json-schema-to-ts";
+import { WidgetBaseProperties } from "../widget-base.js";
 
-export const AiResponseWidgetSchema = z.object({
-  ...WidgetBaseShape,
-  type: z.literal("ai-response"),
-  empty_text: z.string().optional(),
-  thinking_indicator: z.enum(["dots", "text", "none"]).optional(),
-  thinking_text: z.string().optional(),
-  responding_text: z.string().optional(),
-});
+export const AiResponseWidgetSchema = {
+  type: "object",
+  properties: {
+    ...WidgetBaseProperties,
+    type: { const: "ai-response" },
+    empty_text: { type: "string" },
+    thinking_indicator: { enum: ["dots", "text", "none"] },
+    thinking_text: { type: "string" },
+    responding_text: { type: "string" },
+  },
+  required: ["name", "type", "size"],
+  additionalProperties: false,
+} as const;
 
-export type AiResponseWidget = z.infer<typeof AiResponseWidgetSchema>;
+export type AiResponseWidget = FromSchema<typeof AiResponseWidgetSchema>;

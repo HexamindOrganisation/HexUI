@@ -147,16 +147,30 @@ npm run example:layouts  # examples/layouts       (port 5175)
 ## Custom widgets
 
 ```tsx
-import { defineWidget, WidgetRegistry, builtinWidgets, WidgetBaseShape } from "agent-ui";
-import { z } from "zod";
+import {
+  defineWidget,
+  WidgetRegistry,
+  builtinWidgets,
+  WidgetBaseProperties,
+} from "agent-ui";
+import type { FromSchema } from "json-schema-to-ts";
 
-const banner = defineWidget({
+const BannerSchema = {
+  type: "object",
+  properties: {
+    ...WidgetBaseProperties,
+    type: { const: "banner" },
+    message: { type: "string" },
+  },
+  required: ["name", "type", "size", "message"],
+  additionalProperties: false,
+} as const;
+
+type BannerProps = FromSchema<typeof BannerSchema>;
+
+const banner = defineWidget<BannerProps>({
   type: "banner",
-  schema: z.object({
-    ...WidgetBaseShape,
-    type: z.literal("banner"),
-    message: z.string(),
-  }),
+  schema: BannerSchema,
   component: ({ props }) => (
     <div className="rounded-md bg-accent px-4 py-2 text-accent-foreground">
       {props.message}

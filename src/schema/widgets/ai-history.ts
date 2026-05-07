@@ -1,36 +1,34 @@
-import { z } from "zod";
-import { WidgetBaseShape } from "../widget-base.js";
+import type { FromSchema } from "json-schema-to-ts";
+import { WidgetBaseProperties } from "../widget-base.js";
 import { ActionSchema, DataSourceSchema } from "../common.js";
 
-export const ConversationSummarySchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  preview: z.string().optional(),
-  timestamp: z.number().optional(),
-});
+export const ConversationSummarySchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    title: { type: "string", minLength: 1 },
+    preview: { type: "string" },
+    timestamp: { type: "number" },
+  },
+  required: ["id", "title"],
+  additionalProperties: false,
+} as const;
 
-export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
+export type ConversationSummary = FromSchema<typeof ConversationSummarySchema>;
 
-export const AiHistoryWidgetSchema = z.object({
-  ...WidgetBaseShape,
-  type: z.literal("ai-history"),
-  /** Returns ConversationSummary[]. Provided by the host. */
-  data_source: DataSourceSchema.optional(),
-  /** Static fallback if no data_source is set. */
-  conversations: z.array(ConversationSummarySchema).optional(),
-  /**
-   * Action invoked with `{ id }` when a conversation is clicked.
-   * Must return ConversationMessage[] (or { messages: ConversationMessage[] }).
-   * The result is loaded into the conversation log and rendered by ai-response.
-   */
-  on_select: ActionSchema,
-  /**
-   * Optional action invoked when the user clicks "New chat".
-   * Should create a new conversation on the host (returning its summary,
-   * which is appended to the list on the next refresh).
-   */
-  on_new_chat: ActionSchema.optional(),
-  empty_text: z.string().optional(),
-});
+export const AiHistoryWidgetSchema = {
+  type: "object",
+  properties: {
+    ...WidgetBaseProperties,
+    type: { const: "ai-history" },
+    data_source: DataSourceSchema,
+    conversations: { type: "array", items: ConversationSummarySchema },
+    on_select: ActionSchema,
+    on_new_chat: ActionSchema,
+    empty_text: { type: "string" },
+  },
+  required: ["name", "type", "size", "on_select"],
+  additionalProperties: false,
+} as const;
 
-export type AiHistoryWidget = z.infer<typeof AiHistoryWidgetSchema>;
+export type AiHistoryWidget = FromSchema<typeof AiHistoryWidgetSchema>;

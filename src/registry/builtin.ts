@@ -1,17 +1,29 @@
 import { defineWidget } from "./register.js";
 import {
   ButtonGroupWidgetSchema,
+  type ButtonGroupWidget,
   FileTreeWidgetSchema,
+  type FileTreeWidget,
   PageHeaderWidgetSchema,
+  type PageHeaderWidget,
   PageFooterWidgetSchema,
+  type PageFooterWidget,
   AiChatInputWidgetSchema,
+  type AiChatInputWidget,
   AiResponseWidgetSchema,
+  type AiResponseWidget,
   AiHistoryWidgetSchema,
+  type AiHistoryWidget,
   SpacerWidgetSchema,
+  type SpacerWidget,
   MarkdownWidgetSchema,
+  type MarkdownWidget,
   FormWidgetSchema,
+  type FormWidget,
   MetricsWidgetSchema,
+  type MetricsWidget,
   TableWidgetSchema,
+  type TableWidget,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
 import { FileTreeWidgetComponent } from "../widgets/file-tree.js";
@@ -28,69 +40,69 @@ import { TableWidgetComponent } from "../widgets/table.js";
 import type { AnyWidgetDefinition } from "./types.js";
 
 export const builtinWidgets: AnyWidgetDefinition[] = [
-  defineWidget({
+  defineWidget<ButtonGroupWidget>({
     type: "button-group",
     schema: ButtonGroupWidgetSchema,
     component: ButtonGroupWidgetComponent,
   }),
-  defineWidget({
+  defineWidget<FileTreeWidget>({
     type: "file-tree",
     schema: FileTreeWidgetSchema,
     component: FileTreeWidgetComponent,
   }),
-  defineWidget({
+  defineWidget<PageHeaderWidget>({
     type: "page-header",
     schema: PageHeaderWidgetSchema,
     component: PageHeaderWidgetComponent,
     chromeless: true,
   }),
-  defineWidget({
+  defineWidget<PageFooterWidget>({
     type: "page-footer",
     schema: PageFooterWidgetSchema,
     component: PageFooterWidgetComponent,
     chromeless: true,
     slot: "footer",
   }),
-  defineWidget({
+  defineWidget<AiChatInputWidget>({
     type: "ai-chat-input",
     schema: AiChatInputWidgetSchema,
     component: AiChatInputWidgetComponent,
     chromeless: true,
   }),
-  defineWidget({
+  defineWidget<AiResponseWidget>({
     type: "ai-response",
     schema: AiResponseWidgetSchema,
     component: AiResponseWidgetComponent,
     chromeless: true,
   }),
-  defineWidget({
+  defineWidget<AiHistoryWidget>({
     type: "ai-history",
     schema: AiHistoryWidgetSchema,
     component: AiHistoryWidgetComponent,
     chromeless: true,
   }),
-  defineWidget({
+  defineWidget<SpacerWidget>({
     type: "spacer",
     schema: SpacerWidgetSchema,
     component: SpacerWidgetComponent,
     chromeless: true,
   }),
-  defineWidget({
+  defineWidget<MarkdownWidget>({
     type: "markdown",
     schema: MarkdownWidgetSchema,
     component: MarkdownWidgetComponent,
   }),
-  defineWidget({
+  defineWidget<FormWidget>({
     type: "form",
     schema: FormWidgetSchema,
     component: FormWidgetComponent,
   }),
-  defineWidget({
+  defineWidget<MetricsWidget>({
     type: "metrics",
     schema: MetricsWidgetSchema,
     component: MetricsWidgetComponent,
   }),
-  defineWidget({
+  defineWidget<TableWidget>({
     type: "table",
     schema: TableWidgetSchema,
     component: TableWidgetComponent,

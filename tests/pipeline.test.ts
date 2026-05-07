@@ -60,7 +60,7 @@ describe("pipeline", () => {
     expect(plan.errors.some((d) => d.code === "resolve.missing-name")).toBe(true);
   });
 
-  it("includes YAML source line on zod diagnostics", () => {
+  it("includes YAML source line on schema diagnostics", () => {
     // Missing layout_type.
     const yaml = `page: {}\nwidgets: []\n`;
     const parsed = parseYaml(yaml);
@@ -73,7 +73,7 @@ describe("pipeline", () => {
     });
     expect(plan.ok).toBe(false);
     if (plan.ok) return;
-    // Zod error should surface with a source location from the page node.
+    // Ajv error should surface with a source location from the page node.
     const anyLoc = plan.errors.some((d) => d.sourceLine !== undefined);
     expect(anyLoc).toBe(true);
   });

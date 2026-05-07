@@ -6,31 +6,36 @@ How to plug in your own widget types, theme tokens, and agent behavior.
 
 Three things make a widget:
 
-1. A **Zod schema** for its YAML shape.
+1. A **JSON Schema** (declared with `as const`) for its YAML shape.
 2. A **React component** that receives the validated props.
 3. A call to `defineWidget` to bind them.
 
 Register the result in a `WidgetRegistry` and pass it to `<AgentUI>`.
 
 ```tsx
-import { z } from "zod";
+import type { FromSchema } from "json-schema-to-ts";
 import {
   defineWidget,
   WidgetRegistry,
   builtinWidgets,
   AgentUI,
-  WidgetBaseShape,
+  WidgetBaseProperties,
   type WidgetProps,
 } from "agent-ui";
 
-const BannerSchema = z.object({
-  ...WidgetBaseShape,                       // name, type, position, size, tab
-  type: z.literal("banner"),
-  message: z.string(),
-  tone: z.enum(["info", "warn", "error"]).default("info"),
-});
+const BannerSchema = {
+  type: "object",
+  properties: {
+    ...WidgetBaseProperties,                // name, position, size, tab
+    type: { const: "banner" },
+    message: { type: "string" },
+    tone: { enum: ["info", "warn", "error"] },
+  },
+  required: ["name", "type", "size", "message"],
+  additionalProperties: false,
+} as const;
 
-type BannerProps = z.infer<typeof BannerSchema>;
+type BannerProps = FromSchema<typeof BannerSchema>;
 
 function Banner({ props }: WidgetProps<BannerProps>) {
   // Tailwind classes work because the consumer's tailwind.config includes
@@ -50,7 +55,7 @@ function Banner({ props }: WidgetProps<BannerProps>) {
   );
 }
 
-const banner = defineWidget({
+const banner = defineWidget<BannerProps>({
   type: "banner",
   schema: BannerSchema,
   component: Banner,
@@ -62,6 +67,20 @@ export function App() {
   return <AgentUI config={yaml} dispatcher={dispatcher} widgets={registry} />;
 }
 ```
+
+### Schema notes
+
+- Use `as const` so `FromSchema` can infer literal types for `const`/`enum`
+  values. Without it you get widened `string`/`number`.
+- Set `additionalProperties: false` to silently strip unknown keys
+  (Zod's default `.strip()` behavior).
+- **Caveat:** if your schema uses `oneOf` (e.g. for a discriminated union of
+  variants), do **not** set `additionalProperties: false` on each branch —
+  Ajv strips properties between branch attempts and breaks the discriminator.
+  See `src/schema/widgets/form.ts` for the reference pattern.
+- For recursive schemas, declare the TS interface manually and use `$id` +
+  `$ref` in the schema. `FromSchema` doesn't infer recursive types. See
+  `src/schema/widgets/file-tree.ts`.
 
 Now `type: "banner"` works in YAML:
 
@@ -552,7 +571,7 @@ The public surface is deliberately narrow; here's what's exported:
 - **Runtime**: `ActionDispatcher`, `nullDispatcher`, `AgentBridge`, `AgentEvent`
 - **Registry**: `defineWidget`, `WidgetRegistry`, `builtinWidgets`, `WidgetDefinition`, `AnyWidgetDefinition`, `WidgetProps`
 - **Hooks**: `useWidgetData`, `useAgentInbox`, `useAgentUIContext`, `useConversation`, `ConversationMessage`
-- **Schema**: `ConfigSchema`, `buildConfigSchema`, `BuiltinWidgetSchemas`, `BuiltinWidgetType`, `BuiltinWidget`, `WidgetBaseShape`, `WidgetBaseSchema`, plus per-widget schemas (`PageHeaderWidgetSchema`, `FileTreeWidgetSchema`, …) and types
+- **Schema**: `ConfigSchema`, `buildConfigSchema`, `BuiltinWidgetSchemas`, `BuiltinWidgetType`, `BuiltinWidget`, `WidgetBaseProperties`, `WidgetBaseRequired`, plus per-widget schemas (`PageHeaderWidgetSchema`, `FileTreeWidgetSchema`, …) and types
 - **Compile**: `parseYaml`, `compilePlan`, `resolve`, `normalize`, `resolveTheme`, `RenderPlan`, `RenderPlanWidget`, `ResolvedConfig`, `ResolvedWidget`, `ResolvedTheme`, `ThemeTokens`, `ParseResult`, `SourceMap`
 - **Diagnostics**: `Diagnostic`, `DiagnosticSeverity`, `Result`
 

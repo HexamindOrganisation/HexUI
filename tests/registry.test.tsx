@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { z } from "zod";
 import {
   WidgetRegistry,
   builtinWidgets,
@@ -7,9 +6,14 @@ import {
   compilePlan,
   type WidgetProps,
 } from "../src/index.js";
-import { WidgetBaseShape } from "../src/schema/widget-base.js";
+import { WidgetBaseProperties } from "../src/schema/widget-base.js";
 
-type BannerProps = { message: string };
+type BannerProps = {
+  name: string;
+  type: "banner";
+  size: { width: number; height: number | "auto" };
+  message: string;
+};
 
 function Banner({ props }: WidgetProps<BannerProps>): JSX.Element {
   return <div>{props.message}</div>;
@@ -17,15 +21,20 @@ function Banner({ props }: WidgetProps<BannerProps>): JSX.Element {
 
 describe("widget registry", () => {
   it("accepts a custom widget type end-to-end", () => {
-    const CustomSchema = z.object({
-      ...WidgetBaseShape,
-      type: z.literal("banner"),
-      message: z.string(),
-    });
+    const CustomSchema = {
+      type: "object",
+      properties: {
+        ...WidgetBaseProperties,
+        type: { const: "banner" },
+        message: { type: "string" },
+      },
+      required: ["name", "type", "size", "message"],
+      additionalProperties: false,
+    } as const;
 
     const registry = new WidgetRegistry([
       ...builtinWidgets,
-      defineWidget({
+      defineWidget<BannerProps>({
         type: "banner",
         schema: CustomSchema,
         component: Banner,
@@ -69,9 +78,5 @@ describe("widget registry", () => {
     // Per spec §11: unknown widget types render a placeholder widget.
     expect(plan.value.widgets).toHaveLength(1);
     expect(plan.value.widgets[0]!.type).toBe("not-a-real-type");
-    // And a warning diagnostic is recorded.
-    // (diagnostics live on resolve return; we can't easily introspect here
-    // without exporting resolve; the plan's layout-phase diagnostics
-    // suffice as a smoke check.)
   });
 });

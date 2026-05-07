@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { FromSchema } from "json-schema-to-ts";
 import { MainMenuItemSchema } from "./common.js";
 
 /**
@@ -9,21 +9,29 @@ import { MainMenuItemSchema } from "./common.js";
  * `overrides` is an escape hatch: raw CSS variable values applied inline on
  * the AgentUI root (e.g. { "--muted": "210 40% 90%" }).
  */
-export const ThemeSchema = z.object({
-  mode: z.enum(["light", "dark", "system"]).optional(),
-  accent: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{3,8}$/, "accent must be a hex color")
-    .optional(),
-  overrides: z.record(z.string()).optional(),
-});
+export const ThemeSchema = {
+  type: "object",
+  properties: {
+    mode: { enum: ["light", "dark", "system"] },
+    accent: { type: "string", pattern: "^#[0-9a-fA-F]{3,8}$" },
+    overrides: {
+      type: "object",
+      additionalProperties: { type: "string" },
+    },
+  },
+  additionalProperties: false,
+} as const;
 
-export const PageSchema = z.object({
-  layout_type: z.enum(["grid", "flex", "sidebar", "tabs"]),
-  theme: ThemeSchema.optional(),
-  /** Sidebar-layout menu items. Ignored by other layouts. */
-  main_menu: z.array(MainMenuItemSchema).optional(),
-});
+export const PageSchema = {
+  type: "object",
+  properties: {
+    layout_type: { enum: ["grid", "flex", "sidebar", "tabs"] },
+    theme: ThemeSchema,
+    main_menu: { type: "array", items: MainMenuItemSchema },
+  },
+  required: ["layout_type"],
+  additionalProperties: false,
+} as const;
 
-export type Page = z.infer<typeof PageSchema>;
-export type Theme = z.infer<typeof ThemeSchema>;
+export type Theme = FromSchema<typeof ThemeSchema>;
+export type Page = FromSchema<typeof PageSchema>;

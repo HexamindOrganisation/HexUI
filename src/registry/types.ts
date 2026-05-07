@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { ZodTypeAny, z } from "zod";
+import type { ValidateFunction } from "ajv";
 import type { ActionDispatcher } from "../runtime/dispatcher.js";
 
 /**
@@ -22,11 +22,16 @@ export interface WidgetProps<TProps = unknown> {
  */
 export type WidgetSlot = "main" | "footer";
 
-export interface WidgetDefinition<TSchema extends ZodTypeAny = ZodTypeAny> {
+/**
+ * A widget definition supplied to `defineWidget`. The schema is an `as const`
+ * JSON Schema object; the validated props type is supplied by the caller
+ * (typically via `FromSchema<typeof schema>` from `json-schema-to-ts`).
+ */
+export interface WidgetDefinition<TProps = unknown> {
   type: string;
-  schema: TSchema;
-  component: ComponentType<WidgetProps<z.infer<TSchema>>>;
-  defaults?: Partial<z.infer<TSchema>>;
+  schema: object;
+  component: ComponentType<WidgetProps<TProps>>;
+  defaults?: Partial<TProps>;
   /** When true, WidgetHost skips the default border/padding chrome. */
   chromeless?: boolean;
   /** Default "main". "footer" widgets render outside the layout, pinned to the page bottom. */
@@ -34,16 +39,18 @@ export interface WidgetDefinition<TSchema extends ZodTypeAny = ZodTypeAny> {
 }
 
 /**
- * Erased form stored in the registry. Component is widened to `any` so that
- * definitions for different schemas can share a homogeneous container without
- * TypeScript's invariant component-position tripping us up.
+ * Erased form stored in the registry. The Ajv validator is precompiled at
+ * registration time. Component is widened to `any` so definitions for
+ * different schemas share a homogeneous container without TypeScript's
+ * invariant component-position tripping us up.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyWidgetDefinition = {
+export interface AnyWidgetDefinition {
   type: string;
-  schema: ZodTypeAny;
+  schema: object;
+  validate: ValidateFunction;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component: ComponentType<WidgetProps<any>>;
   defaults?: Record<string, unknown>;
   chromeless?: boolean;
   slot?: WidgetSlot;
-};
+}

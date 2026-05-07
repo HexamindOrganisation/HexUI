@@ -1,34 +1,45 @@
-import { z } from "zod";
-import { WidgetBaseShape } from "../widget-base.js";
+import type { FromSchema } from "json-schema-to-ts";
+import { WidgetBaseProperties } from "../widget-base.js";
 
-export const ButtonVariantSchema = z.enum([
-  "default",
-  "destructive",
-  "outline",
-  "secondary",
-  "ghost",
-  "link",
-]);
+export const ButtonVariantSchema = {
+  enum: ["default", "destructive", "outline", "secondary", "ghost", "link"],
+} as const;
 
-export const ButtonSizeSchema = z.enum(["default", "sm", "lg", "icon"]);
+export const ButtonSizeSchema = {
+  enum: ["default", "sm", "lg", "icon"],
+} as const;
 
-export const ButtonGroupItemSchema = z.object({
-  label: z.string().min(1),
-  action: z.string().min(1),
-  args: z.record(z.unknown()).optional(),
-  variant: ButtonVariantSchema.optional(),
-  size: ButtonSizeSchema.optional(),
-  disabled: z.boolean().optional(),
-});
+export const ButtonGroupItemSchema = {
+  type: "object",
+  properties: {
+    label: { type: "string", minLength: 1 },
+    action: { type: "string", minLength: 1 },
+    args: { type: "object", additionalProperties: true },
+    variant: ButtonVariantSchema,
+    size: ButtonSizeSchema,
+    disabled: { type: "boolean" },
+  },
+  required: ["label", "action"],
+  additionalProperties: false,
+} as const;
 
-export const ButtonGroupWidgetSchema = z.object({
-  ...WidgetBaseShape,
-  type: z.literal("button-group"),
-  buttons: z.array(ButtonGroupItemSchema).min(1),
-  orientation: z.enum(["horizontal", "vertical"]).optional(),
-});
+export const ButtonGroupWidgetSchema = {
+  type: "object",
+  properties: {
+    ...WidgetBaseProperties,
+    type: { const: "button-group" },
+    buttons: {
+      type: "array",
+      items: ButtonGroupItemSchema,
+      minItems: 1,
+    },
+    orientation: { enum: ["horizontal", "vertical"] },
+  },
+  required: ["name", "type", "size", "buttons"],
+  additionalProperties: false,
+} as const;
 
-export type ButtonVariant = z.infer<typeof ButtonVariantSchema>;
-export type ButtonSize = z.infer<typeof ButtonSizeSchema>;
-export type ButtonGroupItem = z.infer<typeof ButtonGroupItemSchema>;
-export type ButtonGroupWidget = z.infer<typeof ButtonGroupWidgetSchema>;
+export type ButtonVariant = FromSchema<typeof ButtonVariantSchema>;
+export type ButtonSize = FromSchema<typeof ButtonSizeSchema>;
+export type ButtonGroupItem = FromSchema<typeof ButtonGroupItemSchema>;
+export type ButtonGroupWidget = FromSchema<typeof ButtonGroupWidgetSchema>;

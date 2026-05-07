@@ -1,10 +1,15 @@
-import { z } from "zod";
-import { WidgetBaseShape } from "../widget-base.js";
+import type { FromSchema } from "json-schema-to-ts";
+import { WidgetBaseProperties } from "../widget-base.js";
 
-export const PageFooterWidgetSchema = z.object({
-  ...WidgetBaseShape,
-  type: z.literal("page-footer"),
-  text: z.string().optional(),
-});
+export const PageFooterWidgetSchema = {
+  type: "object",
+  properties: {
+    ...WidgetBaseProperties,
+    type: { const: "page-footer" },
+    text: { type: "string" },
+  },
+  required: ["name", "type", "size"],
+  additionalProperties: false,
+} as const;
 
-export type PageFooterWidget = z.infer<typeof PageFooterWidgetSchema>;
+export type PageFooterWidget = FromSchema<typeof PageFooterWidgetSchema>;

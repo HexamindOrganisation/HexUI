@@ -38,8 +38,8 @@ export {
   BuiltinWidgetSchemas,
   type BuiltinWidgetType,
   type BuiltinWidget,
-  WidgetBaseShape,
-  WidgetBaseSchema,
+  WidgetBaseProperties,
+  WidgetBaseRequired,
 } from "./schema/index.js";
 
 // Compile pipeline (for snapshot tests / advanced embedding)

@@ -1,42 +1,55 @@
-import { z } from "zod";
+import type { FromSchema } from "json-schema-to-ts";
 
-export const IconSchema = z
-  .string()
-  .describe("Icon URL or data URI");
+export const IconSchema = { type: "string" } as const;
+export const ActionSchema = { type: "string", minLength: 1 } as const;
 
-export const ActionSchema = z
-  .string()
-  .min(1)
-  .describe("Action name dispatched to the host");
+export const PositionSchema = {
+  type: "object",
+  properties: {
+    horizontal: { enum: ["left", "right", "center"] },
+    vertical: { enum: ["high", "low", "middle"] },
+  },
+  additionalProperties: false,
+} as const;
 
-export const PositionSchema = z.object({
-  horizontal: z.enum(["left", "right", "center"]).optional(),
-  vertical: z.enum(["high", "low", "middle"]).optional(),
-});
+export const SizeSchema = {
+  type: "object",
+  properties: {
+    width: { type: "integer", minimum: 1, maximum: 12 },
+    height: {
+      oneOf: [
+        { type: "number", exclusiveMinimum: 0 },
+        { const: "auto" },
+      ],
+    },
+  },
+  required: ["width", "height"],
+  additionalProperties: false,
+} as const;
 
-export const SizeSchema = z.object({
-  width: z
-    .number()
-    .int()
-    .min(1)
-    .max(12)
-    .describe("Grid columns (1-12); ignored by non-grid layouts"),
-  height: z.union([z.number().positive(), z.literal("auto")]),
-});
+export const MainMenuItemSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string", minLength: 1 },
+    icon: IconSchema,
+    action: ActionSchema,
+  },
+  required: ["name", "action"],
+  additionalProperties: false,
+} as const;
 
-export const MainMenuItemSchema = z.object({
-  name: z.string().min(1),
-  icon: IconSchema.optional(),
-  action: ActionSchema,
-});
+export const DataSourceSchema = {
+  type: "object",
+  properties: {
+    action: ActionSchema,
+    args: { type: "object", additionalProperties: true },
+    subscribe: { type: "boolean" },
+  },
+  required: ["action"],
+  additionalProperties: false,
+} as const;
 
-export const DataSourceSchema = z.object({
-  action: ActionSchema,
-  args: z.record(z.unknown()).optional(),
-  subscribe: z.boolean().optional(),
-});
-
-export type Position = z.infer<typeof PositionSchema>;
-export type Size = z.infer<typeof SizeSchema>;
-export type MainMenuItem = z.infer<typeof MainMenuItemSchema>;
-export type DataSource = z.infer<typeof DataSourceSchema>;
+export type Position = FromSchema<typeof PositionSchema>;
+export type Size = FromSchema<typeof SizeSchema>;
+export type MainMenuItem = FromSchema<typeof MainMenuItemSchema>;
+export type DataSource = FromSchema<typeof DataSourceSchema>;

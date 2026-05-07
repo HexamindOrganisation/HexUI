@@ -43,7 +43,7 @@ without revisiting the spec.
 |---|----------|-----------|
 | 1 | **Library-first**, not a hosted platform. Ship as an npm package (`<AgentUI />` component + registration APIs). | Lowest risk, integrates anywhere, hosted runtime can come later once the schema stabilizes. |
 | 2 | **React + TypeScript**. | User's stack choice. |
-| 3 | **Zod** for schema validation, with `z.discriminatedUnion` for widget types. | Single source of truth for runtime validation + TS types + JSON Schema export. |
+| 3 | **JSON Schema** for validation (Ajv runtime + `json-schema-to-ts` for compile-time TS types). Discriminated unions via `oneOf` + `const` tag. | Portable artifact (can be exported for backend/IDE), single source of truth for runtime + TS types. |
 | 4 | **Widgets are isolated in v1.** No shared state bus, no widget-to-widget messaging. All coordination goes through the dispatcher. | Keeps the v1 contract small and honest. Revisit in v1.1 if demand emerges. |
 | 5 | **Flat widgets only.** No nesting/composition. | Defer to v2. |
 | 6 | **No i18n.** Strings pass through verbatim. | Host can preprocess. |
@@ -153,13 +153,14 @@ export interface ActionDispatcher {
   has?(action: string): boolean;  // for the resolver cross-check
 }
 
-// Widget registration (for custom widget types)
+// Widget registration (for custom widget types). `schema` is a JSON Schema
+// object declared with `as const`; pass `TProps` as `FromSchema<typeof schema>`.
 export function defineWidget<TProps>(spec: {
   type: string;
-  schema: ZodType<TProps>;
+  schema: object;
   component: React.ComponentType<WidgetProps<TProps>>;
   defaults?: Partial<TProps>;
-}): WidgetDefinition;
+}): AnyWidgetDefinition;
 
 // Widget runtime hooks
 export function useWidgetData<T>(dataSource: DataSource): {
@@ -337,7 +338,7 @@ widgets:
 
 ```ts
 // Post-validation
-type Config = z.infer<typeof ConfigSchema>;
+type Config = FromSchema<typeof ConfigSchema>;
 
 // Post-resolution: actions & widget types have been cross-checked
 type ResolvedWidget = {
@@ -496,8 +497,9 @@ inbox.
 | Concern        | Pick                               | Note                                                |
 |----------------|------------------------------------|-----------------------------------------------------|
 | YAML parser    | `yaml` (eemeli/yaml)               | Preserves line/col — better diagnostics than js-yaml|
-| Validation     | `zod`                              | `z.discriminatedUnion` for widgets                  |
-| Schema export  | `zod-to-json-schema`               | For VS Code autocomplete                            |
+| Validation     | `ajv` + `ajv-formats`              | JSON Schema runtime; `oneOf` + `const` for widgets  |
+| TS types       | `json-schema-to-ts`                | `FromSchema<typeof schema>` infers types compile-time|
+| Schema export  | bare JSON Schema (`emitSchema()`)  | For VS Code autocomplete / backend re-use           |
 | Build          | `vite` library mode + `tsup`       | ESM + CJS + `.d.ts`                                 |
 | Tests          | `vitest` + `@testing-library/react`|                                                     |
 | Charts         | defer / `recharts` as peer-dep     | Keep optional                                       |

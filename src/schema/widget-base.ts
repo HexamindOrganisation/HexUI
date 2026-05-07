@@ -1,17 +1,15 @@
-import { z } from "zod";
 import { PositionSchema, SizeSchema } from "./common.js";
 
 /**
- * Fields every widget has, regardless of type. Widget-specific schemas
- * extend this via z.object({...}).merge(...) or by reusing the keys.
+ * Properties shared by every widget. Spread into a widget schema's
+ * `properties` and add the per-widget `type` const + any widget-specific
+ * fields. The required base keys are listed in `WidgetBaseRequired`.
  */
-export const WidgetBaseShape = {
-  name: z.string().min(1),
-  type: z.string().min(1),
-  position: PositionSchema.optional(),
+export const WidgetBaseProperties = {
+  name: { type: "string", minLength: 1 },
+  position: PositionSchema,
   size: SizeSchema,
-  tab: z.string().optional(),
+  tab: { type: "string" },
 } as const;
 
-export const WidgetBaseSchema = z.object(WidgetBaseShape);
-export type WidgetBase = z.infer<typeof WidgetBaseSchema>;
+export const WidgetBaseRequired = ["name", "type", "size"] as const;

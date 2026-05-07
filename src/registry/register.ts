@@ -1,20 +1,30 @@
-import type { ZodTypeAny, z } from "zod";
 import type {
   AnyWidgetDefinition,
   WidgetDefinition,
   WidgetProps,
 } from "./types.js";
 import type { ComponentType } from "react";
+import { compileSchema } from "../schema/ajv.js";
 
-export function defineWidget<TSchema extends ZodTypeAny>(spec: {
-  type: string;
-  schema: TSchema;
-  component: ComponentType<WidgetProps<z.infer<TSchema>>>;
-  defaults?: Partial<z.infer<TSchema>>;
-  chromeless?: boolean;
-  slot?: "main" | "footer";
-}): WidgetDefinition<TSchema> {
-  return { ...spec };
+/**
+ * Register a widget. The schema must be a JSON Schema object (preferably
+ * declared with `as const` so its TS shape can be derived via
+ * `FromSchema<typeof schema>` from `json-schema-to-ts`). The schema is
+ * compiled with the shared Ajv instance at definition time.
+ */
+export function defineWidget<TProps>(
+  spec: WidgetDefinition<TProps>,
+): AnyWidgetDefinition {
+  const validate = compileSchema(spec.schema);
+  return {
+    type: spec.type,
+    schema: spec.schema,
+    validate,
+    component: spec.component as ComponentType<WidgetProps<unknown>>,
+    ...(spec.defaults && { defaults: spec.defaults as Record<string, unknown> }),
+    ...(spec.chromeless !== undefined && { chromeless: spec.chromeless }),
+    ...(spec.slot && { slot: spec.slot }),
+  };
 }
 
 export class WidgetRegistry {
@@ -46,11 +56,6 @@ export class WidgetRegistry {
 
   all(): AnyWidgetDefinition[] {
     return Array.from(this.defs.values());
-  }
-
-  /** Build a dynamic Zod schema covering every registered widget. */
-  unionSchema(): ZodTypeAny[] {
-    return this.all().map((d) => d.schema);
   }
 
   extend(extras: readonly AnyWidgetDefinition[]): WidgetRegistry {

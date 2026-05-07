@@ -73,7 +73,20 @@ import { MarkdownWidgetSchema } from "./markdown.js";
 import { FormWidgetSchema } from "./form.js";
 import { MetricsWidgetSchema } from "./metrics.js";
 import { TableWidgetSchema } from "./table.js";
-import { z } from "zod";
+import type {
+  ButtonGroupWidget,
+  FileTreeWidget,
+  PageHeaderWidget,
+  PageFooterWidget,
+  AiChatInputWidget,
+  AiResponseWidget,
+  AiHistoryWidget,
+  SpacerWidget,
+  MarkdownWidget,
+  FormWidget,
+  MetricsWidget,
+  TableWidget,
+} from "./index.js";
 
 export const BuiltinWidgetSchemas = {
   "button-group": ButtonGroupWidgetSchema,
@@ -92,20 +105,34 @@ export const BuiltinWidgetSchemas = {
 
 export type BuiltinWidgetType = keyof typeof BuiltinWidgetSchemas;
 
-/** Discriminated union of all built-in widgets. Extended at runtime by the registry. */
-export const BuiltinWidgetUnion = z.discriminatedUnion("type", [
-  ButtonGroupWidgetSchema,
-  FileTreeWidgetSchema,
-  PageHeaderWidgetSchema,
-  PageFooterWidgetSchema,
-  AiChatInputWidgetSchema,
-  AiResponseWidgetSchema,
-  AiHistoryWidgetSchema,
-  SpacerWidgetSchema,
-  MarkdownWidgetSchema,
-  FormWidgetSchema,
-  MetricsWidgetSchema,
-  TableWidgetSchema,
-]);
+/** JSON Schema `oneOf` over every built-in widget. */
+export const BuiltinWidgetUnion = {
+  oneOf: [
+    ButtonGroupWidgetSchema,
+    FileTreeWidgetSchema,
+    PageHeaderWidgetSchema,
+    PageFooterWidgetSchema,
+    AiChatInputWidgetSchema,
+    AiResponseWidgetSchema,
+    AiHistoryWidgetSchema,
+    SpacerWidgetSchema,
+    MarkdownWidgetSchema,
+    FormWidgetSchema,
+    MetricsWidgetSchema,
+    TableWidgetSchema,
+  ],
+} as const;
 
-export type BuiltinWidget = z.infer<typeof BuiltinWidgetUnion>;
+export type BuiltinWidget =
+  | ButtonGroupWidget
+  | FileTreeWidget
+  | PageHeaderWidget
+  | PageFooterWidget
+  | AiChatInputWidget
+  | AiResponseWidget
+  | AiHistoryWidget
+  | SpacerWidget
+  | MarkdownWidget
+  | FormWidget
+  | MetricsWidget
+  | TableWidget;
