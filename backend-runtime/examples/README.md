@@ -47,7 +47,7 @@ Non-streaming invoke (returns the terminal `RunCompleted` event):
 ```bash
 curl -X POST http://127.0.0.1:8080/agents/langchain-hello/invoke \
   -H "Content-Type: application/json" \
-  -d '{"input": {"input": "What time is it in Paris?"}}'
+  -d '{"input": {"messages": [{"role": "user", "content": "What time is it in Paris?"}]}}'
 ```
 
 Streaming run (SSE — frames are `event: <type>\nid: <id>\ndata: <json>`):
@@ -55,7 +55,7 @@ Streaming run (SSE — frames are `event: <type>\nid: <id>\ndata: <json>`):
 ```bash
 curl -N -X POST http://127.0.0.1:8080/agents/langchain-hello/stream \
   -H "Content-Type: application/json" \
-  -d '{"input": {"input": "What time is it in Paris?"}}'
+  -d '{"input": {"messages": [{"role": "user", "content": "What time is it in Paris?"}]}}'
 ```
 
 You should see a sequence like:

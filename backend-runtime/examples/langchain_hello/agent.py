@@ -2,8 +2,8 @@
 Example agent: a tiny LangChain tool-calling agent.
 
 The platform calls `build_agent()` (named in agent.yaml under `agent_callable`)
-and expects a LangChain `Runnable` back. Here we return an AgentExecutor that
-binds one tool to a chat model.
+and expects a LangChain `Runnable` back. In LangChain 1.x the canonical agent
+constructor is `create_agent`, which returns a compiled LangGraph (a Runnable).
 
 Run it through the platform with:
 
@@ -16,8 +16,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 
@@ -29,19 +28,12 @@ def get_current_time(timezone_name: str = "UTC") -> str:
 
 
 def build_agent():
-    """Factory: returns a LangChain Runnable (an AgentExecutor)."""
+    """Factory: returns a LangChain Runnable (a compiled LangGraph agent)."""
     model_name = os.environ.get("LANGCHAIN_HELLO_MODEL", "gpt-4o-mini")
     llm = ChatOpenAI(model=model_name, temperature=0, streaming=True)
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", "You are a concise assistant. Use tools when helpful."),
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ]
+    return create_agent(
+        model=llm,
+        tools=[get_current_time],
+        system_prompt="You are a concise assistant. Use tools when helpful.",
     )
-
-    tools = [get_current_time]
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=False)

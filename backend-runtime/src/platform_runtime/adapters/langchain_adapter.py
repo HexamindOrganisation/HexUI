@@ -196,11 +196,12 @@ class LangChainAdapter(UnifiedAgentRuntime):
                         output=_jsonable(data.get("output")),
                     )
 
-                elif name == "on_chain_end" and lc_event.get("name") in {
-                    "RunnableSequence",
-                    "AgentExecutor",
-                }:
-                    # Capture the terminal chain's output as the run output.
+                elif name == "on_chain_end" and not lc_event.get("parent_ids"):
+                    # Root run: `parent_ids == []` identifies the outermost
+                    # chain (LCEL `RunnableSequence`, LangGraph compiled
+                    # graph, custom Runnable wrapper, ...). This is the only
+                    # robust way to capture the run's final output across
+                    # LangChain shapes.
                     final_output = _jsonable(data.get("output"))
 
                 # Every other LangChain event is intentionally dropped at
@@ -238,7 +239,7 @@ class LangChainAdapter(UnifiedAgentRuntime):
         runnable = await self._get_runnable()
         candidates: list[BaseTool] = []
 
-        # AgentExecutor.tools
+        # Legacy AgentExecutor.tools
         attr = getattr(runnable, "tools", None)
         if isinstance(attr, list):
             candidates.extend(t for t in attr if isinstance(t, BaseTool))
@@ -250,6 +251,20 @@ class LangChainAdapter(UnifiedAgentRuntime):
             for t in bound:
                 if isinstance(t, BaseTool):
                     candidates.append(t)
+
+        # LangGraph CompiledStateGraph (the shape `create_agent` returns).
+        # Walk its nodes looking for a langgraph ToolNode; each node is a
+        # PregelNode whose actual implementation is in `.bound`. We duck-type
+        # on `tools_by_name` to avoid importing langgraph in the core path.
+        nodes = getattr(runnable, "nodes", None)
+        if isinstance(nodes, dict):
+            for pregel_node in nodes.values():
+                impl = getattr(pregel_node, "bound", pregel_node)
+                tools_by_name = getattr(impl, "tools_by_name", None)
+                if isinstance(tools_by_name, dict):
+                    for t in tools_by_name.values():
+                        if isinstance(t, BaseTool):
+                            candidates.append(t)
 
         descriptors: list[ToolDescriptor] = []
         seen: set[str] = set()
