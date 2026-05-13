@@ -1,0 +1,367 @@
+"""
+LangChain adapter.
+
+Wraps any LangChain `Runnable` (LCEL chain, agent executor, chat model, ...)
+and translates its `astream_events(version="v2")` output into the platform's
+normalized `RuntimeEvent` stream.
+
+Why `astream_events` and not callback handlers?
+-----------------------------------------------
+`astream_events` is LangChain's own normalization layer: it produces a single
+event stream regardless of whether the wrapped object is an LLM, a chain, or
+an agent. Translating *its* event names is a small finite mapping. Writing a
+`BaseCallbackHandler` would force us to reassemble the same logic ourselves
+and miss LCEL composition events.
+
+The factory contract
+--------------------
+The registry hands us a `factory` (the callable named in the manifest under
+`agent_callable`). On first use we call `factory()`. The result must be a
+LangChain `Runnable`. If `factory()` returns a coroutine, we await it.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import inspect
+from pathlib import Path
+from typing import Any, AsyncIterator, Callable
+from uuid import uuid4
+
+# LangChain is an optional extra. Importing this module asserts it is
+# installed; the core package does not import this module directly.
+from langchain_core.runnables import Runnable
+from langchain_core.tools import BaseTool
+
+from ..events import (
+    ErrorEvent,
+    MessageCompleted,
+    MessageDelta,
+    RunCompleted,
+    RunStarted,
+    RuntimeEvent,
+    ToolEnd,
+    ToolStart,
+)
+from ..manifest import AgentManifest
+from ..protocol import (
+    AgentMetadata,
+    HealthStatus,
+    InvokeRequest,
+    ToolDescriptor,
+    UnifiedAgentRuntime,
+)
+from . import register_adapter
+
+
+@register_adapter("langchain")
+class LangChainAdapter(UnifiedAgentRuntime):
+    """Adapter for LangChain `Runnable` objects."""
+
+    def __init__(
+        self,
+        *,
+        manifest: AgentManifest,
+        root: Path,
+        factory: Callable[..., Any],
+    ) -> None:
+        self._manifest = manifest
+        self._root = root
+        self._factory = factory
+        self._runnable: Runnable | None = None
+        self._lock = asyncio.Lock()  # guards lazy factory() call
+
+    # ------------------------------------------------------------------
+    # Lazy runnable construction
+    # ------------------------------------------------------------------
+
+    async def _get_runnable(self) -> Runnable:
+        """Call the factory once, then cache the resulting Runnable.
+
+        The factory may be sync or async. We accept both because agent
+        authors writing LCEL chains tend to write sync factories, while
+        authors using async-only model clients write async ones.
+        """
+        if self._runnable is not None:
+            return self._runnable
+
+        async with self._lock:
+            if self._runnable is not None:
+                return self._runnable
+            result = self._factory()
+            if inspect.isawaitable(result):
+                result = await result
+            if not isinstance(result, Runnable):
+                raise TypeError(
+                    f"Factory '{self._manifest.agent_callable}' returned "
+                    f"{type(result).__name__}, expected a LangChain Runnable."
+                )
+            self._runnable = result
+            return result
+
+    # ------------------------------------------------------------------
+    # Streaming: the core method
+    # ------------------------------------------------------------------
+
+    async def stream(
+        self, request: InvokeRequest
+    ) -> AsyncIterator[RuntimeEvent]:
+        run_id = request.run_id
+        seq = _SeqCounter()
+
+        # First event: RunStarted. From this point on, no exception may
+        # escape this generator — we convert them to ErrorEvent.
+        yield RunStarted(
+            run_id=run_id,
+            seq=seq.next(),
+            agent_id=self._manifest.agent_id,
+            input=_safe_input_for_event(request.input),
+        )
+
+        try:
+            runnable = await self._get_runnable()
+        except Exception as e:
+            yield ErrorEvent(
+                run_id=run_id,
+                seq=seq.next(),
+                message=f"Failed to build LangChain runnable: {e}",
+                recoverable=False,
+            )
+            return
+
+        # Track open tool calls so on_tool_end can resolve back to ids.
+        tool_calls: dict[str, str] = {}  # lc_run_id -> our tool_call_id
+        # Track open assistant messages by lc model-run-id.
+        message_ids: dict[str, str] = {}
+
+        final_output: Any = None
+
+        try:
+            async for lc_event in runnable.astream_events(
+                request.input,
+                version="v2",
+                config={"run_id": run_id, "metadata": request.context},
+            ):
+                name = lc_event.get("event")
+                lc_run_id = lc_event.get("run_id", "")
+                data = lc_event.get("data") or {}
+
+                if name == "on_chat_model_start" or name == "on_llm_start":
+                    message_ids[lc_run_id] = uuid4().hex
+
+                elif name == "on_chat_model_stream" or name == "on_llm_stream":
+                    chunk = data.get("chunk")
+                    delta = _extract_text(chunk)
+                    if not delta:
+                        continue
+                    msg_id = message_ids.setdefault(lc_run_id, uuid4().hex)
+                    yield MessageDelta(
+                        run_id=run_id,
+                        seq=seq.next(),
+                        message_id=msg_id,
+                        delta=delta,
+                    )
+
+                elif name == "on_chat_model_end" or name == "on_llm_end":
+                    output = data.get("output")
+                    text = _extract_text(output)
+                    msg_id = message_ids.pop(lc_run_id, uuid4().hex)
+                    yield MessageCompleted(
+                        run_id=run_id,
+                        seq=seq.next(),
+                        message_id=msg_id,
+                        role="assistant",
+                        content=text or "",
+                        metadata={"lc_run_id": lc_run_id},
+                    )
+
+                elif name == "on_tool_start":
+                    tool_call_id = uuid4().hex
+                    tool_calls[lc_run_id] = tool_call_id
+                    yield ToolStart(
+                        run_id=run_id,
+                        seq=seq.next(),
+                        tool_call_id=tool_call_id,
+                        name=lc_event.get("name", "tool"),
+                        arguments=_coerce_dict(data.get("input")),
+                    )
+
+                elif name == "on_tool_end":
+                    tool_call_id = tool_calls.pop(lc_run_id, uuid4().hex)
+                    yield ToolEnd(
+                        run_id=run_id,
+                        seq=seq.next(),
+                        tool_call_id=tool_call_id,
+                        name=lc_event.get("name", "tool"),
+                        output=_jsonable(data.get("output")),
+                    )
+
+                elif name == "on_chain_end" and lc_event.get("name") in {
+                    "RunnableSequence",
+                    "AgentExecutor",
+                }:
+                    # Capture the terminal chain's output as the run output.
+                    final_output = _jsonable(data.get("output"))
+
+                # Every other LangChain event is intentionally dropped at
+                # this stage. We can add more mappings (chain.start/end →
+                # trace.span, on_retriever_*, ...) when the UI needs them.
+
+        except Exception as e:
+            yield ErrorEvent(
+                run_id=run_id,
+                seq=seq.next(),
+                message=f"LangChain stream failed: {e}",
+                recoverable=False,
+                details={"exception_type": type(e).__name__},
+            )
+            return
+
+        yield RunCompleted(
+            run_id=run_id,
+            seq=seq.next(),
+            agent_id=self._manifest.agent_id,
+            output=final_output,
+        )
+
+    # ------------------------------------------------------------------
+    # Introspection
+    # ------------------------------------------------------------------
+
+    async def tools(self) -> list[ToolDescriptor]:
+        """Best-effort tool list.
+
+        LangChain has no universal `runnable.tools` attribute; tool exposure
+        depends on the runnable shape. We probe the common cases (agent
+        executors, tool-bound models). Unknown shapes → empty list.
+        """
+        runnable = await self._get_runnable()
+        candidates: list[BaseTool] = []
+
+        # AgentExecutor.tools
+        attr = getattr(runnable, "tools", None)
+        if isinstance(attr, list):
+            candidates.extend(t for t in attr if isinstance(t, BaseTool))
+
+        # ChatModel.bind_tools(...) result keeps tools in .kwargs
+        kwargs = getattr(runnable, "kwargs", None)
+        if isinstance(kwargs, dict):
+            bound = kwargs.get("tools") or []
+            for t in bound:
+                if isinstance(t, BaseTool):
+                    candidates.append(t)
+
+        descriptors: list[ToolDescriptor] = []
+        seen: set[str] = set()
+        for tool in candidates:
+            if tool.name in seen:
+                continue
+            seen.add(tool.name)
+            descriptors.append(
+                ToolDescriptor(
+                    name=tool.name,
+                    description=tool.description or "",
+                    input_schema=_tool_input_schema(tool),
+                )
+            )
+        return descriptors
+
+    async def metadata(self) -> AgentMetadata:
+        return AgentMetadata(
+            agent_id=self._manifest.agent_id,
+            name=self._manifest.name,
+            framework=self._manifest.framework,
+            version=self._manifest.version,
+            description=self._manifest.description,
+            capabilities=self._manifest.capabilities,
+            extra=self._manifest.extra,
+        )
+
+    async def health(self) -> HealthStatus:
+        # We do NOT call the model here; that would be a remote round-trip
+        # on every healthcheck. Just verify the runnable is constructable.
+        try:
+            await self._get_runnable()
+            return HealthStatus(ok=True)
+        except Exception as e:
+            return HealthStatus(ok=False, details={"error": str(e)})
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+class _SeqCounter:
+    __slots__ = ("_n",)
+
+    def __init__(self) -> None:
+        self._n = -1
+
+    def next(self) -> int:
+        self._n += 1
+        return self._n
+
+
+def _extract_text(obj: Any) -> str:
+    """Pull printable text out of a LangChain chunk / message / dict."""
+    if obj is None:
+        return ""
+    if isinstance(obj, str):
+        return obj
+    # AIMessageChunk / AIMessage / BaseMessage subclasses
+    content = getattr(obj, "content", None)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        # Multimodal: list of dicts with {"type": "text", "text": "..."}
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                parts.append(str(part.get("text", "")))
+        return "".join(parts)
+    if isinstance(obj, dict):
+        if isinstance(obj.get("content"), str):
+            return obj["content"]
+    return ""
+
+
+def _coerce_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if value is None:
+        return {}
+    return {"value": _jsonable(value)}
+
+
+def _jsonable(value: Any) -> Any:
+    """Best-effort conversion to JSON-serializable shape for event payloads."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    # LangChain messages and similar pydantic objects
+    if hasattr(value, "model_dump"):
+        try:
+            return value.model_dump()
+        except Exception:
+            pass
+    return repr(value)
+
+
+def _safe_input_for_event(value: Any) -> dict[str, Any]:
+    coerced = _jsonable(value)
+    if isinstance(coerced, dict):
+        return coerced
+    return {"value": coerced}
+
+
+def _tool_input_schema(tool: BaseTool) -> dict[str, Any]:
+    schema_cls = getattr(tool, "args_schema", None)
+    if schema_cls is None:
+        return {}
+    try:
+        return schema_cls.model_json_schema()
+    except Exception:
+        return {}
