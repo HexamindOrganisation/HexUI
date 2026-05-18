@@ -1,0 +1,11 @@
+@import "agent-ui/shadcn.css";
+@import "agent-ui/style.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
