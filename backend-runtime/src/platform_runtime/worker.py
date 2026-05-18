@@ -47,6 +47,11 @@ try:  # pragma: no cover
     from .adapters import openai_agents_adapter  # noqa: F401
 except ImportError:
     pass
+
+try:  # pragma: no cover
+    from .adapters import google_adk_adapter  # noqa: F401
+except ImportError:
+    pass
 from .ipc import (
     WorkerRequest,
     connect_stdin_reader,

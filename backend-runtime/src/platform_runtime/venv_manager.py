@@ -50,6 +50,7 @@ logger = logging.getLogger("platform_runtime.venv")
 FRAMEWORK_EXTRAS: dict[str, str] = {
     "langchain": "langchain",
     "openai-agents": "openai-agents",
+    "google-adk": "google-adk",
 }
 
 

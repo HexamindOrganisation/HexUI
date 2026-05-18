@@ -37,6 +37,11 @@ try:  # pragma: no cover - import-time check
 except ImportError:
     pass
 
+try:  # pragma: no cover - import-time check
+    from .adapters import google_adk_adapter  # noqa: F401
+except ImportError:
+    pass
+
 from .registry import AgentRegistry, IsolationMode
 from .server import create_app
 
