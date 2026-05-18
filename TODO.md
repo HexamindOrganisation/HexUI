@@ -26,10 +26,10 @@ Items marked **[x]** are done.
 
 Spec calls this out as important; we're in-process today.
 
-- [ ] Subprocess worker protocol: same `UnifiedAgentRuntime` shape, transport = JSON-lines over stdio
-- [ ] Worker process supervisor (spawn, healthcheck, restart on crash)
-- [ ] `RemoteAdapter` in the registry that proxies the local protocol to the worker
-- [ ] Per-agent venv / `requirements:` installation (use `uv` or `pip --target`)
+- [x] Subprocess worker protocol: same `UnifiedAgentRuntime` shape, transport = JSON-lines over stdio
+- [x] Worker process supervisor (spawn, healthcheck via `health` RPC, EOF crash detection — explicit restart)
+- [x] `RemoteAdapter` in the registry that proxies the local protocol to the worker
+- [x] Per-agent venv via `uv` (fallback `python -m venv` + pip); cached by `requirements` hash
 - [ ] Container runner (Docker) — optional second isolation transport
 
 ### Additional frameworks

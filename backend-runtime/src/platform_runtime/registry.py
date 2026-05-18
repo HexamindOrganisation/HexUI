@@ -36,6 +36,7 @@ from .adapters.remote_adapter import RemoteAdapter
 from .manifest import MANIFEST_FILENAME, AgentManifest, ManifestError, load_manifest
 from .protocol import UnifiedAgentRuntime
 from .subprocess_supervisor import WorkerSupervisor
+from .venv_manager import VenvManager
 
 
 logger = logging.getLogger("platform_runtime.registry")
@@ -75,13 +76,21 @@ class AgentRegistry:
         isolation: IsolationMode = IsolationMode.IN_PROCESS,
         *,
         python_executable: str | None = None,
+        venv_manager: VenvManager | None = None,
     ) -> None:
         self._agents: dict[str, LoadedAgent] = {}
         self._isolation = isolation
-        # Interpreter to use when spawning workers. None ⇒ inherit the
-        # parent's `sys.executable`. Piece 4 will override this per-agent
-        # for venv-isolated installs.
+        # Interpreter to use as a fallback when a manifest has no
+        # requirements. None ⇒ inherit the parent's `sys.executable`.
         self._python_executable = python_executable
+        # When an agent declares `requirements:`, the venv manager
+        # materializes a per-agent venv whose python overrides the fallback.
+        # Disabled by passing `venv_manager=False` (we accept that as None,
+        # see below) — but defaulting it on in subprocess mode is what
+        # makes `requirements:` Just Work.
+        if venv_manager is None and isolation is IsolationMode.SUBPROCESS:
+            venv_manager = VenvManager()
+        self._venv_manager: VenvManager | None = venv_manager
 
     @property
     def isolation(self) -> IsolationMode:
@@ -162,14 +171,24 @@ class AgentRegistry:
         synchronous (so discovery stays straightforward) while preserving
         fail-fast behavior at the explicit warmup step.
         """
-        supervisor = WorkerSupervisor(
-            str(root),
-            python_executable=self._python_executable,
-        )
+        # Pick the interpreter. Priority:
+        #   1. per-agent venv (if manifest has requirements and a venv
+        #      manager is configured),
+        #   2. registry-level override (`python_executable=...`),
+        #   3. parent's sys.executable (supervisor default).
+        python = self._python_executable
+        if self._venv_manager is not None:
+            venv_python = self._venv_manager.ensure_venv(manifest, root)
+            if venv_python is not None:
+                python = str(venv_python)
+
+        supervisor = WorkerSupervisor(str(root), python_executable=python)
         logger.info(
-            "Prepared subprocess worker for agent_id=%s framework=%s (not started)",
+            "Prepared subprocess worker for agent_id=%s framework=%s "
+            "(python=%s, not started)",
             manifest.agent_id,
             manifest.framework,
+            python or "<sys.executable>",
         )
         return RemoteAdapter(supervisor=supervisor)
 
