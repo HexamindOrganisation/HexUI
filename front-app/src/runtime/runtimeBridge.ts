@@ -3,7 +3,7 @@ import type {
   AgentEvent,
   ToolCallPayload,
 } from "agent-ui";
-import { cancelRun } from "./api.js";
+import { cancelRun, invokeAction } from "./api.js";
 import { streamRun } from "./sseStream.js";
 import type { RuntimeEvent } from "./types.js";
 
@@ -68,7 +68,33 @@ export class RuntimeBridge implements AgentBridge {
   constructor(
     private readonly agentId: string,
     private readonly framework: string,
+    private readonly declaredActions: ReadonlySet<string> = new Set(),
   ) {}
+
+  /** Names of agent-declared actions this bridge will forward to the runtime. */
+  hasAction(name: string): boolean {
+    return this.declaredActions.has(name);
+  }
+
+  /**
+   * Forward a UI action to the runtime, then re-emit any side-effect
+   * widget events through the bridge so the lib's inbox routing
+   * delivers them to the matching widgets.
+   *
+   * Returns the action handler's `result`. Caller (the dispatcher) hands
+   * this back to whoever invoked the action.
+   */
+  invokeAction = async (name: string, args: unknown): Promise<unknown> => {
+    const { result, events } = await invokeAction(this.agentId, name, args);
+    for (const event of events) {
+      this.emit({
+        kind: "tool-call",
+        widget: event.widget,
+        payload: event.payload,
+      });
+    }
+    return result;
+  };
 
   subscribeAgentOutput = (cb: (event: AgentEvent) => void): (() => void) => {
     this.listeners.add(cb);

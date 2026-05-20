@@ -1,4 +1,4 @@
-import type { AgentMetadata } from "./types.js";
+import type { ActionResult, AgentMetadata } from "./types.js";
 
 /**
  * REST helpers for the runtime's non-streaming endpoints. Streaming lives
@@ -60,4 +60,38 @@ export async function cancelRun(
   }
   const data = (await res.json()) as { cancelled: boolean };
   return data.cancelled;
+}
+
+/**
+ * Invoke a UI-triggered action declared by the agent's manifest.
+ *
+ * Returns the runtime's envelope `{ result, events }`. The caller is
+ * responsible for fanning `events` out to the widget inboxes — typically
+ * the RuntimeBridge does this so handlers behave the same regardless of
+ * which widget invoked them.
+ */
+export async function invokeAction(
+  agentId: string,
+  action: string,
+  args: unknown,
+): Promise<ActionResult> {
+  const res = await fetch(
+    `/api/agents/${encodeURIComponent(agentId)}/actions/${encodeURIComponent(action)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ args: args ?? {} }),
+    },
+  );
+  if (!res.ok) {
+    let detail = `${res.status}`;
+    try {
+      const body = (await res.json()) as { detail?: string };
+      if (body.detail) detail = body.detail;
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new Error(`Action '${action}' failed: ${detail}`);
+  }
+  return res.json();
 }

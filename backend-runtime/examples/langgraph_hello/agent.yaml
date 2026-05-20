@@ -16,6 +16,10 @@ capabilities:
   approvals: false
   multi_turn: true
 
+actions:
+  - server_ping
+  - inject_tool_log
+
 env:
   - OPENAI_API_KEY
 

@@ -59,22 +59,37 @@ export function AgentChat(): JSX.Element {
   }, [agentId]);
 
   const metadata = state.kind === "ready" ? state.metadata : null;
+  const declaredActions = useMemo(
+    () => new Set(metadata?.actions ?? []),
+    [metadata?.actions],
+  );
   const bridge = useMemo(() => {
     if (!metadata) return undefined;
-    return new RuntimeBridge(metadata.agent_id, metadata.framework);
-  }, [metadata?.agent_id, metadata?.framework]);
+    return new RuntimeBridge(
+      metadata.agent_id,
+      metadata.framework,
+      declaredActions,
+    );
+  }, [metadata?.agent_id, metadata?.framework, declaredActions]);
 
   const dispatcher: ActionDispatcher = useMemo(
     () => ({
-      async invoke(action: string) {
-        if (action === "cancel-run" && bridge) await bridge.cancel();
+      async invoke(action: string, args?: unknown) {
+        if (!bridge) return null;
+        if (action === "cancel-run") {
+          await bridge.cancel();
+          return null;
+        }
+        if (bridge.hasAction(action)) {
+          return bridge.invokeAction(action, args);
+        }
         return null;
       },
       has(action: string) {
-        return action === "cancel-run";
+        return action === "cancel-run" || declaredActions.has(action);
       },
     }),
-    [bridge],
+    [bridge, declaredActions],
   );
 
   if (state.kind === "loading") return <CenteredNote>Loading agent…</CenteredNote>;

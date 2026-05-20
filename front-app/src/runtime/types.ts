@@ -18,7 +18,21 @@ export interface AgentMetadata {
   version: string;
   description: string;
   capabilities: AgentCapabilities;
+  /** UI-triggered action names declared by the agent's manifest. */
+  actions: string[];
   extra: Record<string, unknown>;
+}
+
+/** One widget-targeted side-effect event emitted by an action handler. */
+export interface WidgetEvent {
+  widget: string;
+  payload: unknown;
+}
+
+/** Envelope returned by `POST /agents/{id}/actions/{name}`. */
+export interface ActionResult {
+  result: unknown;
+  events: WidgetEvent[];
 }
 
 type BaseEvent = {
