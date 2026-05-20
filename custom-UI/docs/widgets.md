@@ -234,8 +234,10 @@ The widget formats byte sizes (`245 B`, `12.4 KB`, `2.1 MB`, `1.34 GB`) when
 
 ## `ai-chat-input`
 
-User input box with a Send button. Submits go to the `AgentBridge`. Also
-records the user's message in the conversation log read by `ai-history`.
+User input box with two icon-only buttons stacked next to the textarea:
+a **send** button (right arrow) on top and a **cancel** button (filled
+square, destructive variant) below. Submits go to the `AgentBridge`; the
+cancel button invokes the dispatcher's `cancel-run` action.
 
 ### YAML
 
@@ -245,13 +247,13 @@ records the user's message in the conversation log read by `ai-history`.
   position: { horizontal: "left", vertical: "low" }
   size: { width: 12, height: "auto" }
   placeholder: "Ask anything…"   # optional
-  submit_label: "Send"           # optional
+  submit_label: "Send"           # optional; screen-reader label for the send button
   rows: 2                        # optional; textarea rows, 1..20
 ```
 
 ### Submit flow
 
-On Enter (or Send click) with non-empty trimmed text:
+On Enter (or click on the send arrow) with non-empty trimmed text:
 
 1. Pushes the text into the conversation log via `pushUserMessage()`.
 2. If an `AgentBridge` is connected, calls `agent.onUserSubmit(text)`.
@@ -260,6 +262,22 @@ On Enter (or Send click) with non-empty trimmed text:
 4. Otherwise, the input is rendered inert with a dev-mode console warning.
 
 Pressing **Shift+Enter** inserts a newline; **Enter alone** submits.
+
+### Cancel button
+
+- **Disabled** when no run is in flight; **enabled** while submitting.
+- On click, calls `dispatcher.invoke("cancel-run")`. The host wires this
+  action to whatever stops the agent (commonly `bridge.cancel()`).
+- Dispatcher errors are swallowed silently — the UI has nothing visual
+  to roll back, and a failed cancel call is a deployment issue, not a
+  user-visible one.
+
+### Accessibility
+
+- The icons are decorative (`aria-hidden`); each button's accessible
+  name comes from `aria-label`. Defaults: "Send" and "Cancel run".
+- `submit_label` overrides the send button's label; the cancel button's
+  label is fixed in v0 (`"Cancel run"`).
 
 ---
 

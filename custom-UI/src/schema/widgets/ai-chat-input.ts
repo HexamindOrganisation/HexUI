@@ -7,6 +7,7 @@ export const AiChatInputWidgetSchema = {
     ...WidgetBaseProperties,
     type: { const: "ai-chat-input" },
     placeholder: { type: "string" },
+    /** Screen-reader label for the send button. Icon is fixed (right arrow). */
     submit_label: { type: "string" },
     rows: { type: "integer", minimum: 1, maximum: 20 },
   },

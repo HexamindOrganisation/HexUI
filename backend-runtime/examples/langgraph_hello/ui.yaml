@@ -3,14 +3,12 @@
 #
 # Layout (12-col grid):
 #
-#   ┌──────────────────────────────────────────┬─────────────────┐
-#   │  page-header                             │ Cancel run      │  high
-#   ├──────────────┬───────────────────────────┼─────────────────┤
-#   │              │                           │                 │
+#   ┌────────────────────────────────────────────────────────────┐
+#   │  page-header                                               │  high
+#   ├──────────────┬───────────────────────────┬─────────────────┤
 #   │   help md    │     ai-response           │  tool-calls     │  middle
-#   │              │                           │                 │
 #   ├──────────────┴───────────────────────────┴─────────────────┤
-#   │  ai-chat-input                                             │  low
+#   │  ai-chat-input  (send + cancel stacked next to textarea)   │  low
 #   └────────────────────────────────────────────────────────────┘
 #
 # The `tool-calls` widget MUST be named exactly `tool-calls` — that's the
@@ -24,16 +22,9 @@ widgets:
   - name: header
     type: page-header
     position: { horizontal: left, vertical: high }
-    size: { width: 9, height: auto }
+    size: { width: 12, height: auto }
     title: LangGraph Hello
     subtitle: Bare StateGraph · model + tool nodes
-
-  - name: actions
-    type: button-group
-    position: { horizontal: right, vertical: high }
-    size: { width: 3, height: auto }
-    buttons:
-      - { label: "Cancel run", action: "cancel-run", variant: "destructive" }
 
   - name: help
     type: markdown
@@ -49,7 +40,7 @@ widgets:
       flow into the **Tool calls** panel on the right — click any entry
       to inspect arguments and output.
 
-      Click **Cancel run** mid-stream to test the cancel API.
+      Use the stop button next to the input to cancel a run mid-stream.
 
   - name: transcript
     type: ai-response
@@ -70,5 +61,4 @@ widgets:
     position: { horizontal: left, vertical: low }
     size: { width: 12, height: auto }
     placeholder: "Ask the LangGraph agent…"
-    submit_label: Send
     rows: 2
