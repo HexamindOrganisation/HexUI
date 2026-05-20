@@ -228,14 +228,9 @@ export class RuntimeBridge implements AgentBridge {
       }
 
       case "state.update":
-        // Useful but noisy in chat; render only multi-agent handoffs.
-        if (event.key === "active_agent") {
-          this.emit({
-            kind: "message",
-            role: "system",
-            content: `[active agent] ${String(event.value)}`,
-          });
-        }
+        // Not surfaced in chat — clutters the transcript with internal
+        // bookkeeping (e.g. ADK's `active_agent=adk_hello` on every run).
+        // Will route to a dedicated state widget when one ships.
         return;
 
       case "error":

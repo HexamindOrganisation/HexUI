@@ -31,7 +31,7 @@ def build_agent() -> Agent:
     """Factory: returns a Google ADK `Agent`."""
     return Agent(
         name="adk_hello",
-        model=os.environ.get("ADK_HELLO_MODEL", "gemini-2.0-flash"),
+        model=os.environ.get("ADK_HELLO_MODEL", "gemini-2.5-flash"),
         instruction="You are a concise assistant. Use tools when helpful.",
         tools=[FunctionTool(get_current_time)],
     )
