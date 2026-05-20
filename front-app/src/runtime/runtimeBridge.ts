@@ -1,7 +1,20 @@
-import type { AgentBridge, AgentEvent } from "agent-ui";
+import type {
+  AgentBridge,
+  AgentEvent,
+  ToolCallPayload,
+} from "agent-ui";
 import { cancelRun } from "./api.js";
 import { streamRun } from "./sseStream.js";
 import type { RuntimeEvent } from "./types.js";
+
+/**
+ * Name of the widget that receives tool-call routing payloads. Agents
+ * that want a dedicated tool log include a widget by exactly this name
+ * in their `ui.yaml`. When no such widget exists, the lib drops the
+ * event with a console diagnostic — the chat transcript stays clean of
+ * tool noise either way.
+ */
+const TOOL_CALLS_WIDGET = "tool-calls";
 
 /**
  * Implements `agent-ui`'s `AgentBridge` interface against the platform
@@ -11,19 +24,28 @@ import type { RuntimeEvent } from "./types.js";
  * -----------------
  * The runtime emits a richer, closed-set event vocabulary
  * (message.delta, tool.start, state.update, trace.span, …).
- * `agent-ui` consumes a smaller set (token, message, status, error).
- * This bridge is the translation seam — every runtime event becomes
- * zero or one `AgentEvent`.
+ * `agent-ui` consumes a smaller set (token, message, status, tool-call,
+ * error). This bridge is the translation seam — every runtime event
+ * becomes zero or one `AgentEvent`.
  *
  *   runtime                    agent-ui
  *   ─────────────────          ─────────────────
  *   run.started        →       status: thinking
  *   message.delta      →       token
  *   message.completed  →       message (assistant)
- *   tool.start         →       message (system, "[tool] X(args)")
- *   tool.end           →       message (system, "[result] X → output")
+ *   tool.start         →       tool-call (routed to TOOL_CALLS_WIDGET)
+ *   tool.end           →       tool-call (routed to TOOL_CALLS_WIDGET)
  *   error              →       error (or system "Run cancelled" if details.cancelled)
  *   run.completed      →       status: idle
+ *
+ * Tool routing
+ * ------------
+ * Tool events used to render as `[tool] foo(args)` system messages in the
+ * chat transcript. That mixed tool noise with user/assistant text. Now
+ * they emit as `tool-call` payloads aimed at a widget named `tool-calls`
+ * (see TOOL_CALLS_WIDGET). Agents that include such a widget in their
+ * `ui.yaml` get a dedicated tool log; agents that don't see no chat
+ * pollution and a single console diagnostic from the lib.
  *
  * Cancellation
  * ------------
@@ -148,21 +170,32 @@ export class RuntimeBridge implements AgentBridge {
         return;
 
       case "tool.start": {
-        const args = JSON.stringify(event.arguments);
+        const payload: ToolCallPayload = {
+          phase: "start",
+          id: event.tool_call_id,
+          name: event.name,
+          arguments: event.arguments,
+        };
         this.emit({
-          kind: "message",
-          role: "system",
-          content: `[tool] ${event.name}(${args})`,
+          kind: "tool-call",
+          widget: TOOL_CALLS_WIDGET,
+          payload,
         });
         return;
       }
 
       case "tool.end": {
-        const out = formatToolOutput(event.output);
+        const payload: ToolCallPayload = {
+          phase: "end",
+          id: event.tool_call_id,
+          name: event.name,
+          output: event.output,
+          error: event.error,
+        };
         this.emit({
-          kind: "message",
-          role: "system",
-          content: `[result] ${event.name} -> ${out}`,
+          kind: "tool-call",
+          widget: TOOL_CALLS_WIDGET,
+          payload,
         });
         return;
       }
@@ -205,13 +238,3 @@ export class RuntimeBridge implements AgentBridge {
   }
 }
 
-function formatToolOutput(output: unknown): string {
-  if (output === null || output === undefined) return "";
-  if (typeof output === "string") return output;
-  try {
-    const s = JSON.stringify(output);
-    return s.length > 200 ? s.slice(0, 200) + "…" : s;
-  } catch {
-    return String(output);
-  }
-}

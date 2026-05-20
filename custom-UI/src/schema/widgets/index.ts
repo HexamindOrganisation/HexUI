@@ -60,6 +60,13 @@ export {
   TableModeSchema,
   type TableMode,
 } from "./table.js";
+export {
+  ToolCallsWidgetSchema,
+  type ToolCallsWidget,
+  type ToolCallPayload,
+  type ToolCallStartPayload,
+  type ToolCallEndPayload,
+} from "./tool-calls.js";
 
 import { ButtonGroupWidgetSchema } from "./button-group.js";
 import { FileTreeWidgetSchema } from "./file-tree.js";
@@ -73,6 +80,7 @@ import { MarkdownWidgetSchema } from "./markdown.js";
 import { FormWidgetSchema } from "./form.js";
 import { MetricsWidgetSchema } from "./metrics.js";
 import { TableWidgetSchema } from "./table.js";
+import { ToolCallsWidgetSchema } from "./tool-calls.js";
 import type {
   ButtonGroupWidget,
   FileTreeWidget,
@@ -86,6 +94,7 @@ import type {
   FormWidget,
   MetricsWidget,
   TableWidget,
+  ToolCallsWidget,
 } from "./index.js";
 
 export const BuiltinWidgetSchemas = {
@@ -101,6 +110,7 @@ export const BuiltinWidgetSchemas = {
   form: FormWidgetSchema,
   metrics: MetricsWidgetSchema,
   table: TableWidgetSchema,
+  "tool-calls": ToolCallsWidgetSchema,
 } as const;
 
 export type BuiltinWidgetType = keyof typeof BuiltinWidgetSchemas;
@@ -120,6 +130,7 @@ export const BuiltinWidgetUnion = {
     FormWidgetSchema,
     MetricsWidgetSchema,
     TableWidgetSchema,
+    ToolCallsWidgetSchema,
   ],
 } as const;
 
@@ -135,4 +146,5 @@ export type BuiltinWidget =
   | MarkdownWidget
   | FormWidget
   | MetricsWidget
-  | TableWidget;
+  | TableWidget
+  | ToolCallsWidget;

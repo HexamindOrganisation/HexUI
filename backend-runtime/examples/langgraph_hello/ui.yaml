@@ -1,17 +1,20 @@
 # Custom UI for this agent. Served by GET /agents/langgraph-hello/ui.
 # The front-app falls back to its default chat layout when this file is absent.
 #
-# Layout:
+# Layout (12-col grid):
 #
-#   ┌─────────────────────┬──────────────────────────────────────┐
-#   │ page-header         │              | Cancel run            │  high
-#   ├─────────────────────┼──────────────────────────────────────┤
-#   │                     │                                      │
-#   │  markdown help      │  ai-response (transcript)            │  middle
-#   │                     │                                      │
-#   ├─────────────────────┴──────────────────────────────────────┤
+#   ┌──────────────────────────────────────────┬─────────────────┐
+#   │  page-header                             │ Cancel run      │  high
+#   ├──────────────┬───────────────────────────┼─────────────────┤
+#   │              │                           │                 │
+#   │   help md    │     ai-response           │  tool-calls     │  middle
+#   │              │                           │                 │
+#   ├──────────────┴───────────────────────────┴─────────────────┤
 #   │  ai-chat-input                                             │  low
 #   └────────────────────────────────────────────────────────────┘
+#
+# The `tool-calls` widget MUST be named exactly `tool-calls` — that's the
+# name the front-app's RuntimeBridge routes tool events to.
 
 page:
   layout_type: grid
@@ -35,24 +38,32 @@ widgets:
   - name: help
     type: markdown
     position: { horizontal: left, vertical: middle }
-    size: { width: 4, height: 480 }
+    size: { width: 3, height: 480 }
     content: |
       ### Try it
       Ask anything. The agent has one tool:
 
       - `echo(text)` — echoes its argument.
 
-      Watch the transcript on the right. Tool calls appear as
-      `[tool] echo(...)` and `[result] echo -> ...` system messages.
+      The chat transcript stays clean of tool noise. Tool invocations
+      flow into the **Tool calls** panel on the right — click any entry
+      to inspect arguments and output.
 
       Click **Cancel run** mid-stream to test the cancel API.
 
   - name: transcript
     type: ai-response
-    position: { horizontal: right, vertical: middle }
-    size: { width: 8, height: 480 }
+    position: { horizontal: center, vertical: middle }
+    size: { width: 6, height: 480 }
     empty_text: "Send a message to start a run."
     thinking_indicator: dots
+
+  - name: tool-calls
+    type: tool-calls
+    position: { horizontal: right, vertical: middle }
+    size: { width: 3, height: 480 }
+    title: Tool calls
+    empty_text: "Tool invocations appear here."
 
   - name: chat-input
     type: ai-chat-input

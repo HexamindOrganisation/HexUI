@@ -187,12 +187,20 @@ class LangChainAdapter(UnifiedAgentRuntime):
                     output = data.get("output")
                     text = _extract_text(output)
                     msg_id = message_ids.pop(lc_run_id, uuid4().hex)
+                    # When the model decides to call a tool, the response
+                    # message has no text content (the tool calls live in
+                    # `output.tool_calls`). Emitting a `MessageCompleted`
+                    # with empty content produces a blank chat bubble.
+                    # Skip those turns entirely — tool activity surfaces
+                    # via `tool.start` / `tool.end` events instead.
+                    if not text:
+                        continue
                     yield MessageCompleted(
                         run_id=run_id,
                         seq=seq.next(),
                         message_id=msg_id,
                         role="assistant",
-                        content=text or "",
+                        content=text,
                         metadata={"lc_run_id": lc_run_id},
                     )
 

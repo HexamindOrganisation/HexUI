@@ -5,6 +5,13 @@ export { AgentUI, type AgentUIProps } from "./components/AgentUI.js";
 export type { ActionDispatcher } from "./runtime/dispatcher.js";
 export { nullDispatcher } from "./runtime/dispatcher.js";
 export type { AgentBridge, AgentEvent } from "./runtime/agentBridge.js";
+// Tool-call payload shape consumed by the built-in `tool-calls` widget;
+// re-exported here so bridge authors don't have to deep-import the schema.
+export type {
+  ToolCallPayload,
+  ToolCallStartPayload,
+  ToolCallEndPayload,
+} from "./schema/widgets/tool-calls.js";
 
 // Widget registration
 export {

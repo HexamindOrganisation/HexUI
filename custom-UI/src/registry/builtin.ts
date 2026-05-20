@@ -24,6 +24,8 @@ import {
   type MetricsWidget,
   TableWidgetSchema,
   type TableWidget,
+  ToolCallsWidgetSchema,
+  type ToolCallsWidget,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
 import { FileTreeWidgetComponent } from "../widgets/file-tree.js";
@@ -37,6 +39,7 @@ import { MarkdownWidgetComponent } from "../widgets/markdown.js";
 import { FormWidgetComponent } from "../widgets/form.js";
 import { MetricsWidgetComponent } from "../widgets/metrics.js";
 import { TableWidgetComponent } from "../widgets/table.js";
+import { ToolCallsWidgetComponent } from "../widgets/tool-calls.js";
 import type { AnyWidgetDefinition } from "./types.js";
 
 export const builtinWidgets: AnyWidgetDefinition[] = [
@@ -106,5 +109,10 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     type: "table",
     schema: TableWidgetSchema,
     component: TableWidgetComponent,
+  }),
+  defineWidget<ToolCallsWidget>({
+    type: "tool-calls",
+    schema: ToolCallsWidgetSchema,
+    component: ToolCallsWidgetComponent,
   }),
 ];

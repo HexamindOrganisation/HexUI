@@ -1,19 +1,24 @@
 /**
  * Default `agent-ui` page used when an agent does NOT ship its own
- * `ui.yaml`. Per-agent overrides arrive in Slice 3 — at that point this
- * file becomes the fallback only.
+ * `ui.yaml`. Slice 3 onwards: this is the fallback.
  *
- * Layout:
+ * Layout (12-col grid):
  *
  *   ┌──────────────────────────────────────────────────────────┐
  *   │  page-header                            | Cancel run     │  high
- *   ├──────────────────────────────────────────────────────────┤
- *   │                                                          │
- *   │  ai-response (transcript)                                │  middle
- *   │                                                          │
- *   ├──────────────────────────────────────────────────────────┤
+ *   ├─────────────────────────────────┬────────────────────────┤
+ *   │                                 │                        │
+ *   │  ai-response (transcript)       │  tool-calls            │  middle
+ *   │                                 │                        │
+ *   ├─────────────────────────────────┴────────────────────────┤
  *   │  ai-chat-input                                           │  low
  *   └──────────────────────────────────────────────────────────┘
+ *
+ * The `tool-calls` widget MUST be named `"tool-calls"` — that's the name
+ * the runtime bridge routes tool events to. Renaming it here means the
+ * runtime's `tool.start` / `tool.end` events get dropped by the lib's
+ * widget-routing layer and disappear silently. See
+ * `runtime/runtimeBridge.ts` (constant `TOOL_CALLS_WIDGET`).
  */
 export const defaultChatPage = {
   page: {
@@ -45,9 +50,17 @@ export const defaultChatPage = {
       name: "transcript",
       type: "ai-response",
       position: { horizontal: "left", vertical: "middle" },
-      size: { width: 12, height: 480 },
+      size: { width: 8, height: 480 },
       empty_text: "Send a message to start a run.",
       thinking_indicator: "dots",
+    },
+    {
+      name: "tool-calls",
+      type: "tool-calls",
+      position: { horizontal: "right", vertical: "middle" },
+      size: { width: 4, height: 480 },
+      title: "Tool calls",
+      empty_text: "No tools called yet.",
     },
     {
       name: "chat-input",
