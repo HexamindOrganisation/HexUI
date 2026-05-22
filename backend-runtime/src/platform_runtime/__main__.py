@@ -23,6 +23,12 @@ import logging
 import os
 import sys
 
+# Emit an immediate alive-marker so users on slow filesystems (notably
+# WSL importing from /mnt/c, where importing the framework SDKs takes
+# 30-90s) see that the process is loading rather than thinking it hung.
+sys.stdout.write("[platform_runtime] starting (importing adapters)…\n")
+sys.stdout.flush()
+
 import uvicorn
 
 from .adapters import langchain_adapter  # noqa: F401
