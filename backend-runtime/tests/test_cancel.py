@@ -43,15 +43,11 @@ def slow_agent_dir(tmp_path: Path) -> Path:
                 # out-of-band cancel HTTP call has time to land before the
                 # script finishes naturally.
                 return [
-                    ("delta", {"message_id": "m", "delta": "tick"}),
+                    ("delta", {"block_key": "m", "text": "tick"}),
                     ("sleep", {"seconds": 0.3}),
-                    ("delta", {"message_id": "m", "delta": "tock"}),
+                    ("delta", {"block_key": "m", "text": "tock"}),
                     ("sleep", {"seconds": 0.3}),
-                    ("message_completed", {
-                        "message_id": "m",
-                        "role": "assistant",
-                        "content": "tick tock",
-                    }),
+                    ("end_block", {"block_key": "m"}),
                 ]
             """
         ).lstrip()
@@ -123,10 +119,10 @@ async def test_cancel_terminates_in_flight_run(slow_agent_dir: Path) -> None:
     await drain_task
 
     types = [type(e).__name__ for e in events]
-    assert "RunStarted" in types
+    assert "RunStartEvent" in types
     assert "ErrorEvent" in types
-    # The natural last event (RunCompleted) must NOT have fired.
-    assert "RunCompleted" not in types
+    # The natural last event (RunEndEvent) must NOT have fired.
+    assert "RunEndEvent" not in types
 
     # The error event carries the cancelled marker.
     err = next(e for e in events if type(e).__name__ == "ErrorEvent")

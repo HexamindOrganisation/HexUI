@@ -20,11 +20,11 @@ Each Event carries:
 
 Mapping highlights
 ------------------
-  text part, partial=True             →  MessageDelta
-  text part, not partial              →  MessageCompleted
-  function_call part                  →  ToolStart
-  function_response part              →  ToolEnd
-  event.author change (multi-agent)   →  StateUpdate(key="active_agent")
+  text part, partial=True             →  block_delta (text block)
+  text part, not partial              →  block_end / full text block
+  function_call part                  →  tool_start
+  function_response part              →  tool_end
+  event.author change (multi-agent)   →  state_update(key="active_agent")
 """
 
 from __future__ import annotations
@@ -43,17 +43,8 @@ from google.adk.tools import FunctionTool
 from google.genai import types as genai_types
 from google.adk.events import Event
 
-from ..events import (
-    ErrorEvent,
-    MessageCompleted,
-    MessageDelta,
-    RunCompleted,
-    RunStarted,
-    RuntimeEvent,
-    StateUpdate,
-    ToolEnd,
-    ToolStart,
-)
+from ..events import StreamEvent
+from ..run_emitter import RunEmitter, extract_query
 from ..manifest import AgentManifest
 from ..protocol import (
     AgentMetadata,
@@ -137,29 +128,26 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
 
     async def stream(
         self, request: InvokeRequest
-    ) -> AsyncIterator[RuntimeEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         run_id = request.run_id
-        seq = _SeqCounter()
+        emitter = RunEmitter(run_id, agent_id=self._manifest.agent_id)
         cancel_signal = asyncio.Event()
         self._cancel_signals[run_id] = cancel_signal
 
-        yield RunStarted(
-            run_id=run_id,
-            seq=seq.next(),
-            agent_id=self._manifest.agent_id,
+        for ev in emitter.run_start(
+            query=extract_query(request.input),
             input=_safe_input_for_event(request.input),
-        )
+        ):
+            yield ev
 
         try:
             runner = await self._get_runner()
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"Failed to build ADK runner: {e}",
-                recoverable=False,
-            )
+            for ev in emitter.error(
+                f"Failed to build ADK runner: {e}", recoverable=False
+            ):
+                yield ev
             return
 
         # Identifiers ADK needs. We use the platform run_id as the session
@@ -192,16 +180,17 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
             )
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"Could not convert input to ADK session + new_message: {e}",
+            for ev in emitter.error(
+                f"Could not convert input to ADK session + new_message: {e}",
                 recoverable=False,
-            )
+            ):
+                yield ev
             return
 
-        # Per-run id maps. function_call.id ↔ our tool_call_id.
+        # Per-run id maps. function_call.id ↔ our tool_id.
         tool_call_ids: dict[str, str] = {}
+        # Block bookkeeping: streamed text is keyed by current_message_id;
+        # an author switch (multi-agent) starts a new block.
         current_message_id: str | None = None
         current_message_author: str | None = None
         last_author: str | None = None
@@ -214,27 +203,31 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
                 new_message=new_message,
             ):
                 if cancel_signal.is_set():
-                    yield ErrorEvent(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        message="Run cancelled",
+                    for ce in emitter.error(
+                        "Run cancelled",
                         recoverable=False,
                         details={"cancelled": True},
-                    )
+                    ):
+                        yield ce
                     return
 
-                # Multi-agent transitions surface as StateUpdate so the UI
-                # can render "now talking to: X". `author` is the agent
-                # that produced this event.
+                # Multi-agent transitions surface as state_update so the UI
+                # can render "now talking to: X". `author` is the agent that
+                # produced this event. A switch also closes any open block
+                # from the previous author.
                 author = getattr(ev, "author", None)
                 if author and author != last_author:
                     last_author = author
-                    yield StateUpdate(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        key="active_agent",
-                        value=author,
-                    )
+                    if (
+                        current_message_id is not None
+                        and emitter.has_block(current_message_id)
+                    ):
+                        for be in emitter.end_block(current_message_id):
+                            yield be
+                    current_message_id = None
+                    current_message_author = None
+                    for se in emitter.state_update("active_agent", author):
+                        yield se
 
                 content = getattr(ev, "content", None)
                 parts = getattr(content, "parts", None) or []
@@ -247,9 +240,9 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
 
                     if text:
                         if partial:
-                            # Start a new message on the first delta we see
-                            # for this author. The author switch above means
-                            # a new agent starts a new message id.
+                            # Streamed chunk. Open a new block on the first
+                            # delta for this author (block opens lazily inside
+                            # the emitter).
                             if (
                                 current_message_id is None
                                 or current_message_author != author
@@ -257,92 +250,85 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
                                 current_message_id = uuid4().hex
                                 current_message_author = author
                                 last_text = ""
-                            yield MessageDelta(
-                                run_id=run_id,
-                                seq=seq.next(),
-                                message_id=current_message_id,
-                                delta=text,
-                            )
+                            for de in emitter.text_delta(
+                                current_message_id, text
+                            ):
+                                yield de
                             last_text += text
                         else:
-                            # Fully-formed text in one event. Use the
-                            # pending message id if we have one (we were
-                            # streaming deltas), else mint a new one.
-                            msg_id = current_message_id or uuid4().hex
+                            # Fully-formed text in one event. If we streamed
+                            # deltas, close that block (accumulated text is
+                            # authoritative); otherwise emit a whole block.
+                            if (
+                                current_message_id is not None
+                                and emitter.has_block(current_message_id)
+                            ):
+                                for be in emitter.end_block(
+                                    current_message_id
+                                ):
+                                    yield be
+                            else:
+                                for be in emitter.full_text_block(text):
+                                    yield be
                             current_message_id = None
                             current_message_author = None
                             last_text = text
-                            yield MessageCompleted(
-                                run_id=run_id,
-                                seq=seq.next(),
-                                message_id=msg_id,
-                                role="assistant",
-                                content=text,
-                                metadata={"author": author or ""},
-                            )
 
                     elif func_call is not None:
                         call_id = getattr(func_call, "id", None) or uuid4().hex
-                        tool_call_id = uuid4().hex
-                        tool_call_ids[call_id] = tool_call_id
-                        yield ToolStart(
-                            run_id=run_id,
-                            seq=seq.next(),
-                            tool_call_id=tool_call_id,
-                            name=getattr(func_call, "name", "tool"),
+                        tool_id = uuid4().hex
+                        tool_call_ids[call_id] = tool_id
+                        for te in emitter.tool_start(
+                            tool_id=tool_id,
+                            tool_name=getattr(func_call, "name", "tool"),
                             arguments=_coerce_args(
                                 getattr(func_call, "args", None)
                             ),
-                        )
+                        ):
+                            yield te
 
                     elif func_resp is not None:
                         call_id = getattr(func_resp, "id", "") or ""
-                        tool_call_id = tool_call_ids.pop(call_id, uuid4().hex)
-                        yield ToolEnd(
-                            run_id=run_id,
-                            seq=seq.next(),
-                            tool_call_id=tool_call_id,
-                            name=getattr(func_resp, "name", "tool"),
+                        tool_id = tool_call_ids.pop(call_id, uuid4().hex)
+                        for te in emitter.tool_end(
+                            tool_id=tool_id,
+                            tool_name=getattr(func_resp, "name", "tool"),
                             output=_jsonable(
                                 getattr(func_resp, "response", None)
                             ),
-                        )
+                        ):
+                            yield te
 
                 # If this event finalized the turn and we had a pending
-                # streamed message, emit its MessageCompleted now using the
-                # accumulated text. Without this, callers would never see
-                # a terminal message frame for streamed responses.
-                if getattr(ev, "turn_complete", False) and current_message_id is not None:
-                    yield MessageCompleted(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        message_id=current_message_id,
-                        role="assistant",
-                        content=last_text,
-                        metadata={"author": current_message_author or ""},
-                    )
+                # streamed block, close it now using the accumulated text.
+                # Without this, callers would never see a terminal block_end
+                # for streamed responses.
+                if (
+                    getattr(ev, "turn_complete", False)
+                    and current_message_id is not None
+                ):
+                    if emitter.has_block(current_message_id):
+                        for be in emitter.end_block(current_message_id):
+                            yield be
                     current_message_id = None
                     current_message_author = None
                     last_text = ""
 
         except Exception as e:
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"Google ADK stream failed: {e}",
+            for ev in emitter.error(
+                f"Google ADK stream failed: {e}",
                 recoverable=False,
                 details={"exception_type": type(e).__name__},
-            )
+            ):
+                yield ev
             return
         finally:
             self._cancel_signals.pop(run_id, None)
 
-        yield RunCompleted(
-            run_id=run_id,
-            seq=seq.next(),
-            agent_id=self._manifest.agent_id,
-            output={"text": last_text} if last_text else None,
-        )
+        for ev in emitter.run_end(
+            output={"text": last_text} if last_text else None
+        ):
+            yield ev
 
     # ------------------------------------------------------------------
     # Introspection
@@ -477,17 +463,6 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-class _SeqCounter:
-    __slots__ = ("_n",)
-
-    def __init__(self) -> None:
-        self._n = -1
-
-    def next(self) -> int:
-        self._n += 1
-        return self._n
-
 
 def _coerce_args(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):

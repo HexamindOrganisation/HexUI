@@ -35,18 +35,8 @@ from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-from ..events import (
-    ErrorEvent,
-    MessageCompleted,
-    MessageDelta,
-    RunCompleted,
-    RunStarted,
-    RuntimeEvent,
-    StateUpdate,
-    ToolEnd,
-    ToolStart,
-    TraceSpan,
-)
+from ..events import StreamEvent
+from ..run_emitter import RunEmitter, extract_query
 from ..manifest import AgentManifest
 from ..protocol import (
     AgentMetadata,
@@ -112,44 +102,40 @@ class LangChainAdapter(UnifiedAgentRuntime):
 
     async def stream(
         self, request: InvokeRequest
-    ) -> AsyncIterator[RuntimeEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         run_id = request.run_id
-        seq = _SeqCounter()
+        emitter = RunEmitter(run_id, agent_id=self._manifest.agent_id)
         cancel_signal = asyncio.Event()
         self._cancel_signals[run_id] = cancel_signal
 
-        # First event: RunStarted. From this point on, no exception may
+        # First event: RunStartEvent. From this point on, no exception may
         # escape this generator — we convert them to ErrorEvent.
-        yield RunStarted(
-            run_id=run_id,
-            seq=seq.next(),
-            agent_id=self._manifest.agent_id,
+        for ev in emitter.run_start(
+            query=extract_query(request.input),
             input=_safe_input_for_event(request.input),
-        )
+        ):
+            yield ev
 
         try:
             runnable = await self._get_runnable()
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"Failed to build LangChain runnable: {e}",
-                recoverable=False,
-            )
+            for ev in emitter.error(
+                f"Failed to build LangChain runnable: {e}", recoverable=False
+            ):
+                yield ev
             return
 
-        # Track open tool calls so on_tool_end can resolve back to ids.
-        tool_calls: dict[str, str] = {}  # lc_run_id -> our tool_call_id
-        # Track open assistant messages by lc model-run-id.
-        message_ids: dict[str, str] = {}
+        # Map an lc tool-run id → our tool_id (minted per call so the wire
+        # stream is self-consistent across adapters).
+        tool_ids: dict[str, str] = {}
         # Track open chain spans for trace emission. We record the start
         # time so the matching on_chain_end can produce a completed span.
         open_spans: dict[str, _OpenSpan] = {}
 
         final_output: Any = None
 
-        translated_input = _translate_input(request.input)
+        translated_input = translate_input(request.input)
 
         try:
             async for lc_event in runnable.astream_events(
@@ -158,80 +144,62 @@ class LangChainAdapter(UnifiedAgentRuntime):
                 config={"run_id": run_id, "metadata": request.context},
             ):
                 if cancel_signal.is_set():
-                    yield ErrorEvent(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        message="Run cancelled",
+                    for ev in emitter.error(
+                        "Run cancelled",
                         recoverable=False,
                         details={"cancelled": True},
-                    )
+                    ):
+                        yield ev
                     return
                 name = lc_event.get("event")
                 lc_run_id = lc_event.get("run_id", "")
                 data = lc_event.get("data") or {}
 
-                if name == "on_chat_model_start" or name == "on_llm_start":
-                    message_ids[lc_run_id] = uuid4().hex
-
-                elif name == "on_chat_model_stream" or name == "on_llm_stream":
+                if name == "on_chat_model_stream" or name == "on_llm_stream":
+                    # Streamed token → text block keyed by the model run id.
+                    # The block opens lazily on the first non-empty delta.
                     chunk = data.get("chunk")
-                    delta = _extract_text(chunk)
-                    if not delta:
-                        continue
-                    msg_id = message_ids.setdefault(lc_run_id, uuid4().hex)
-                    yield MessageDelta(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        message_id=msg_id,
-                        delta=delta,
-                    )
+                    for ev in emitter.text_delta(
+                        lc_run_id, _extract_text(chunk)
+                    ):
+                        yield ev
 
                 elif name == "on_chat_model_end" or name == "on_llm_end":
-                    output = data.get("output")
-                    text = _extract_text(output)
-                    msg_id = message_ids.pop(lc_run_id, uuid4().hex)
-                    # When the model decides to call a tool, the response
-                    # message has no text content (the tool calls live in
-                    # `output.tool_calls`). Emitting a `MessageCompleted`
-                    # with empty content produces a blank chat bubble.
-                    # Skip those turns entirely — tool activity surfaces
-                    # via `tool.start` / `tool.end` events instead.
-                    if not text:
-                        continue
-                    yield MessageCompleted(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        message_id=msg_id,
-                        role="assistant",
-                        content=text,
-                        metadata={"lc_run_id": lc_run_id},
-                    )
+                    # Close the streamed block. If the model never streamed
+                    # (non-streaming client) but produced text, emit it as a
+                    # complete block. A tool-call turn has no text → nothing
+                    # is emitted, and tool activity surfaces via tool events.
+                    if emitter.has_block(lc_run_id):
+                        for ev in emitter.end_block(lc_run_id):
+                            yield ev
+                    else:
+                        text = _extract_text(data.get("output"))
+                        for ev in emitter.full_text_block(text):
+                            yield ev
 
                 elif name == "on_tool_start":
-                    tool_call_id = uuid4().hex
-                    tool_calls[lc_run_id] = tool_call_id
-                    yield ToolStart(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        tool_call_id=tool_call_id,
-                        name=lc_event.get("name", "tool"),
+                    tool_id = uuid4().hex
+                    tool_ids[lc_run_id] = tool_id
+                    for ev in emitter.tool_start(
+                        tool_id=tool_id,
+                        tool_name=lc_event.get("name", "tool"),
                         arguments=_coerce_dict(data.get("input")),
-                    )
+                    ):
+                        yield ev
 
                 elif name == "on_tool_end":
-                    tool_call_id = tool_calls.pop(lc_run_id, uuid4().hex)
-                    yield ToolEnd(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        tool_call_id=tool_call_id,
-                        name=lc_event.get("name", "tool"),
+                    tool_id = tool_ids.pop(lc_run_id, uuid4().hex)
+                    for ev in emitter.tool_end(
+                        tool_id=tool_id,
+                        tool_name=lc_event.get("name", "tool"),
                         output=_jsonable(data.get("output")),
-                    )
+                    ):
+                        yield ev
 
                 elif name == "on_chain_start":
                     # Open a span for every chain that starts. We do not
                     # emit anything yet — the matching on_chain_end will
-                    # produce a single completed TraceSpan.
+                    # produce a single completed TraceSpanEvent.
                     open_spans[lc_run_id] = _OpenSpan(
                         name=lc_event.get("name", "chain"),
                         start_ts=_utcnow(),
@@ -243,13 +211,13 @@ class LangChainAdapter(UnifiedAgentRuntime):
 
                     if not parent_ids:
                         # Root run terminal output. Used to populate
-                        # RunCompleted.output. Robust across LangChain shapes
+                        # RunEndEvent.output. Robust across LangChain shapes
                         # (LCEL RunnableSequence, LangGraph CompiledStateGraph,
                         # custom Runnable wrapper).
                         final_output = _jsonable(data.get("output"))
 
                     else:
-                        # State.update: emit only for DIRECT children of the
+                        # state_update: emit only for DIRECT children of the
                         # root run. For LangGraph these are the graph nodes
                         # ("model", "tools", ...), and their outputs are the
                         # state increment. Filtering by depth keeps the
@@ -261,51 +229,44 @@ class LangChainAdapter(UnifiedAgentRuntime):
                         ):
                             output = data.get("output")
                             if output not in (None, {}, [], ""):
-                                yield StateUpdate(
-                                    run_id=run_id,
-                                    seq=seq.next(),
-                                    key=lc_event.get("name", "node"),
-                                    value=_jsonable(output),
-                                )
+                                for ev in emitter.state_update(
+                                    lc_event.get("name", "node"),
+                                    _jsonable(output),
+                                ):
+                                    yield ev
 
-                    # Close the span and emit TraceSpan for any non-root
-                    # chain. The root is omitted: it is already represented
-                    # by run.started / run.completed.
+                    # Close the span and emit a TraceSpanEvent for any
+                    # non-root chain. The root is omitted: it is already
+                    # represented by run_start / run_end.
                     span = open_spans.pop(lc_run_id, None)
                     if span is not None and parent_ids:
-                        yield TraceSpan(
-                            run_id=run_id,
-                            seq=seq.next(),
+                        for ev in emitter.trace_span(
                             span_id=lc_run_id,
                             parent_span_id=parent_ids[0] if parent_ids else None,
                             name=span.name,
                             start_ts=span.start_ts,
                             end_ts=_utcnow(),
                             attributes={"lc_event": "chain"},
-                        )
+                        ):
+                            yield ev
 
                 # Every other LangChain event is intentionally dropped at
                 # this stage (on_retriever_*, on_prompt_*, ...). They can
                 # be promoted to spans/state when a concrete UI need arises.
 
         except Exception as e:
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"LangChain stream failed: {e}",
+            for ev in emitter.error(
+                f"LangChain stream failed: {e}",
                 recoverable=False,
                 details={"exception_type": type(e).__name__},
-            )
+            ):
+                yield ev
             return
         finally:
             self._cancel_signals.pop(run_id, None)
 
-        yield RunCompleted(
-            run_id=run_id,
-            seq=seq.next(),
-            agent_id=self._manifest.agent_id,
-            output=final_output,
-        )
+        for ev in emitter.run_end(output=final_output):
+            yield ev
 
     # ------------------------------------------------------------------
     # Introspection
@@ -396,17 +357,6 @@ class LangChainAdapter(UnifiedAgentRuntime):
 # Helpers
 # ---------------------------------------------------------------------------
 
-class _SeqCounter:
-    __slots__ = ("_n",)
-
-    def __init__(self) -> None:
-        self._n = -1
-
-    def next(self) -> int:
-        self._n += 1
-        return self._n
-
-
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -486,7 +436,7 @@ def _tool_input_schema(tool: BaseTool) -> dict[str, Any]:
     except Exception:
         return {}
 
-def _translate_input(input: dict[str, list[dict[str, str]]]) -> dict[str, list[Any]]:
+def translate_input(input: dict[str, list[dict[str, str]]]) -> dict[str, list[Any]]:
     res = {"messages": []}
     for message in input.get("messages", []):
         role = message.get("role")

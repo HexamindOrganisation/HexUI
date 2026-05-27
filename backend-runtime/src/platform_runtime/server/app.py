@@ -7,8 +7,8 @@ Exposes the unified runtime over HTTP:
     GET  /agents/{id}/metadata      -> AgentMetadata
     GET  /agents/{id}/tools         -> list[ToolDescriptor]
     GET  /agents/{id}/health        -> HealthStatus
-    POST /agents/{id}/invoke        -> RunCompleted (drains the stream)
-    POST /agents/{id}/stream        -> text/event-stream of RuntimeEvent
+    POST /agents/{id}/invoke        -> RunEndEvent (drains the stream)
+    POST /agents/{id}/stream        -> text/event-stream of StreamEvent
 
 The application is built around a single `AgentRegistry` instance attached to
 `app.state`. Tests construct a registry, populate it, and pass it to
@@ -31,7 +31,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from sse_starlette.sse import EventSourceResponse
 
 from ..actions import ActionError
-from ..events import RuntimeEvent
+from ..events import StreamEvent
 from ..protocol import InvokeRequest
 from ..registry import AgentRegistry, RegistryError
 
@@ -169,6 +169,30 @@ def create_app(registry: AgentRegistry) -> FastAPI:
         ok = await runtime.cancel(run_id)
         return {"cancelled": ok}
 
+    @app.post("/agents/{agent_id}/runs/{run_id}/approvals/{approval_id}")
+    async def resolve_approval(
+        agent_id: str, run_id: str, approval_id: str, body: dict | None = None
+    ) -> dict:
+        """Resolve a human-in-the-loop approval and resume the run.
+
+        Body is `{"decision": "approved"|"denied", "decided_by"?: str,
+        "payload"?: {...}}`. Correlates with an `ApprovalRequestedEvent`
+        carrying `approval_id` previously emitted on this run's stream. The
+        run resumes and emits an `ApprovalResolvedEvent`.
+
+        Returns `{"resolved": true}` when a matching pending approval was
+        found, `{"resolved": false}` otherwise (unknown/already resolved, or
+        the adapter does not support HITL).
+        """
+        runtime = _resolve(registry, agent_id)
+        body = body or {}
+        decision = body.get("decision", "approved")
+        payload = body.get("payload")
+        if body.get("decided_by") is not None:
+            payload = {**(payload or {}), "decided_by": body["decided_by"]}
+        ok = await runtime.resume(run_id, approval_id, decision, payload)
+        return {"resolved": ok}
+
     @app.post("/agents/{agent_id}/stream")
     async def stream(agent_id: str, body: InvokeRequest, request: Request):
         runtime = _resolve(registry, agent_id)
@@ -231,16 +255,16 @@ def _resolve_loaded(registry: AgentRegistry, agent_id: str):
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-def _to_sse_frame(event: RuntimeEvent) -> dict:
-    """Translate a `RuntimeEvent` into a sse-starlette frame dict.
+def _to_sse_frame(event: StreamEvent) -> dict:
+    """Translate a `StreamEvent` into a sse-starlette frame dict.
 
-    - `event` — the SSE event name (the platform event type)
-    - `id`    — the event id, used by EventSource for `Last-Event-ID`
+    - `event` — the SSE event name (the platform `event_type`)
+    - `id`    — the `event_id`, used by EventSource for `Last-Event-ID`
     - `data`  — JSON-encoded payload
     """
     payload = event.model_dump(mode="json")
     return {
-        "event": payload["type"],
-        "id": payload["id"],
+        "event": payload["event_type"],
+        "id": payload["event_id"],
         "data": json.dumps(payload, separators=(",", ":")),
     }

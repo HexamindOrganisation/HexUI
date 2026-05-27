@@ -21,7 +21,7 @@ from typing import AsyncIterator
 
 from pydantic import TypeAdapter
 
-from ..events import RunCompleted, RuntimeEvent
+from ..events import RunEndEvent, StreamEvent
 from ..protocol import (
     AgentMetadata,
     HealthStatus,
@@ -33,7 +33,7 @@ from ..subprocess_supervisor import WorkerSupervisor
 
 
 # Single shared adapter for parsing the discriminated event union.
-_EVENT_ADAPTER: TypeAdapter[RuntimeEvent] = TypeAdapter(RuntimeEvent)
+_EVENT_ADAPTER: TypeAdapter[StreamEvent] = TypeAdapter(StreamEvent)
 
 
 class RemoteAdapter(UnifiedAgentRuntime):
@@ -44,20 +44,20 @@ class RemoteAdapter(UnifiedAgentRuntime):
 
     async def stream(
         self, request: InvokeRequest
-    ) -> AsyncIterator[RuntimeEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         # Forward params over the wire. The worker reconstructs an
         # InvokeRequest on the other side; we hand it the JSON-mode dump
         # so anything Pydantic-native (UUIDs, datetimes) is wire-safe.
         params = request.model_dump(mode="json")
         async for raw in self._sup.stream_rpc("stream", params):
-            # Each raw frame is a serialized RuntimeEvent. Parsing through
+            # Each raw frame is a serialized StreamEvent. Parsing through
             # the discriminated union restores the typed subclass — same
             # contract the in-process adapters provide.
             yield _EVENT_ADAPTER.validate_python(raw)
 
-    async def invoke(self, request: InvokeRequest) -> RunCompleted:
+    async def invoke(self, request: InvokeRequest) -> RunEndEvent:
         raw = await self._sup.rpc("invoke", request.model_dump(mode="json"))
-        return RunCompleted.model_validate(raw)
+        return RunEndEvent.model_validate(raw)
 
     async def tools(self) -> list[ToolDescriptor]:
         raw = await self._sup.rpc("tools")

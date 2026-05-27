@@ -25,7 +25,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from .events import RunCompleted, RuntimeEvent
+from .events import RunEndEvent, StreamEvent
 
 
 # ---------------------------------------------------------------------------
@@ -100,14 +100,15 @@ class UnifiedAgentRuntime(ABC):
     """Abstract runtime interface implemented by every framework adapter."""
 
     @abstractmethod
-    async def stream(self, request: InvokeRequest) -> AsyncIterator[RuntimeEvent]:
+    async def stream(self, request: InvokeRequest) -> AsyncIterator[StreamEvent]:
         """Run the agent and yield normalized events as they occur.
 
         Implementations MUST:
-        - emit a `RunStarted` as the first event and a `RunCompleted` (or
+        - emit a `RunStartEvent` as the first event and a `RunEndEvent` (or
           `ErrorEvent`) as the last event;
-        - assign a monotonically increasing `seq` to every event within the
-          run, starting at 0;
+        - assign a monotonically increasing `sequence` to every event within
+          the run, starting at 1 (note: persisted steps share the counter, so
+          emitted event sequences are strictly increasing but not contiguous);
         - propagate `request.run_id` onto every event;
         - never raise out of the generator after the first event has been
           yielded — failures after that point become `ErrorEvent`s.
@@ -117,20 +118,20 @@ class UnifiedAgentRuntime(ABC):
         # analyzers; subclasses override entirely.
         yield  # type: ignore[unreachable]
 
-    async def invoke(self, request: InvokeRequest) -> RunCompleted:
-        """Drain `stream` and return the terminal `RunCompleted` event.
+    async def invoke(self, request: InvokeRequest) -> RunEndEvent:
+        """Drain `stream` and return the terminal `RunEndEvent` event.
 
         Default implementation suits any adapter whose `stream` already
-        emits a `RunCompleted`. Adapters with a cheaper non-streaming path
+        emits a `RunEndEvent`. Adapters with a cheaper non-streaming path
         may override this for efficiency.
         """
-        terminal: RunCompleted | None = None
+        terminal: RunEndEvent | None = None
         async for event in self.stream(request):
-            if isinstance(event, RunCompleted):
+            if isinstance(event, RunEndEvent):
                 terminal = event
         if terminal is None:
             raise RuntimeError(
-                "Adapter stream finished without emitting RunCompleted"
+                "Adapter stream finished without emitting RunEndEvent"
             )
         return terminal
 
@@ -162,6 +163,28 @@ class UnifiedAgentRuntime(ABC):
 
         Default implementation returns False (adapter does not support
         cancellation). Adapters opt in by overriding.
+        """
+        return False
+
+    async def resume(
+        self,
+        run_id: str,
+        approval_id: str,
+        decision: str,
+        payload: dict[str, Any] | None = None,
+    ) -> bool:
+        """Resolve a pending human-in-the-loop approval and resume the run.
+
+        Correlates with an `ApprovalRequestedEvent` previously emitted on
+        `run_id` carrying `approval_id`. `decision` is an
+        `ApprovalDecision` value ("approved" / "denied"); `payload` carries
+        any structured input for `kind=input` requests. The run then emits a
+        matching `ApprovalResolvedEvent` and continues.
+
+        Returns True if a matching pending approval was found and resolved,
+        False otherwise (unknown run/approval, already resolved, or this
+        adapter does not support HITL). Default implementation returns False;
+        adapters that emit `ApprovalRequestedEvent` opt in by overriding.
         """
         return False
 

@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable
 from uuid import uuid4
@@ -38,17 +37,8 @@ from agents import (
     Runner,
 )
 
-from ..events import (
-    ErrorEvent,
-    MessageCompleted,
-    MessageDelta,
-    RunCompleted,
-    RunStarted,
-    RuntimeEvent,
-    StateUpdate,
-    ToolEnd,
-    ToolStart,
-)
+from ..events import StreamEvent
+from ..run_emitter import RunEmitter, extract_query
 from ..manifest import AgentManifest
 from ..protocol import (
     AgentMetadata,
@@ -105,39 +95,37 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
 
     async def stream(
         self, request: InvokeRequest
-    ) -> AsyncIterator[RuntimeEvent]:
+    ) -> AsyncIterator[StreamEvent]:
         run_id = request.run_id
-        seq = _SeqCounter()
+        emitter = RunEmitter(run_id, agent_id=self._manifest.agent_id)
         cancel_signal = asyncio.Event()
         self._cancel_signals[run_id] = cancel_signal
 
-        # First event: RunStarted. Past this point no exception may escape;
-        # everything becomes an ErrorEvent.
-        yield RunStarted(
-            run_id=run_id,
-            seq=seq.next(),
-            agent_id=self._manifest.agent_id,
+        # First event: RunStartEvent. Past this point no exception may
+        # escape; everything becomes an ErrorEvent.
+        for ev in emitter.run_start(
+            query=extract_query(request.input),
             input=_safe_input_for_event(request.input),
-        )
+        ):
+            yield ev
 
         try:
             agent = await self._get_agent()
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"Failed to build agent: {e}",
-                recoverable=False,
-            )
+            for ev in emitter.error(
+                f"Failed to build agent: {e}", recoverable=False
+            ):
+                yield ev
             return
 
         # Map an SDK tool-call's `call_id` (assigned by OpenAI's Responses
-        # API) to our own platform-level tool_call_id. We mint our own so
-        # the wire stream is self-consistent across adapters.
+        # API) to our own platform-level tool_id. We mint our own so the
+        # wire stream is self-consistent across adapters.
         tool_call_ids: dict[str, str] = {}
         # The model can stream multiple distinct messages within one run
-        # (e.g. think → tool-call → final reply). Each gets its own id.
+        # (e.g. think → tool-call → final reply). Each gets its own block,
+        # keyed by this id; reset to None when a message is finalized.
         current_message_id: str | None = None
 
         translated_input = _translate_input(request.input)
@@ -148,21 +136,20 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
             async for ev in result.stream_events():
 
                 if cancel_signal.is_set():
-                    yield ErrorEvent(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        message="Run cancelled",
+                    for ce in emitter.error(
+                        "Run cancelled",
                         recoverable=False,
                         details={"cancelled": True},
-                    )
+                    ):
+                        yield ce
                     return
 
                 if isinstance(ev, RawResponsesStreamEvent):
-                    # Raw OpenAI Responses API stream events. We only
-                    # forward textual token deltas as MessageDelta; the
-                    # rest of the raw stream (response.created, .completed,
-                    # function-call.* arguments deltas, ...) is implicit
-                    # in the higher-level RunItem events.
+                    # Raw OpenAI Responses API stream events. We only forward
+                    # textual token deltas as block deltas; the rest of the
+                    # raw stream (response.created, .completed,
+                    # function-call.* arguments deltas, ...) is implicit in
+                    # the higher-level RunItem events.
                     data = ev.data
                     data_type = getattr(data, "type", None)
 
@@ -172,61 +159,57 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
                             continue
                         if current_message_id is None:
                             current_message_id = uuid4().hex
-                        yield MessageDelta(
-                            run_id=run_id,
-                            seq=seq.next(),
-                            message_id=current_message_id,
-                            delta=delta_text,
-                        )
+                        for de in emitter.text_delta(
+                            current_message_id, delta_text
+                        ):
+                            yield de
 
                 elif isinstance(ev, RunItemStreamEvent):
                     name = ev.name
                     item = ev.item
 
                     if name == "message_output_created":
-                        # A fully-formed assistant message just landed.
+                        # A fully-formed assistant message just landed. If we
+                        # streamed it, close the open block (its accumulated
+                        # text is authoritative); otherwise emit it whole.
                         text = _extract_message_text(item)
-                        msg_id = current_message_id or uuid4().hex
-                        current_message_id = None  # next deltas start a new message
-                        yield MessageCompleted(
-                            run_id=run_id,
-                            seq=seq.next(),
-                            message_id=msg_id,
-                            role="assistant",
-                            content=text,
-                            metadata={
-                                "sdk_item_type": getattr(item, "type", ""),
-                            },
-                        )
+                        if current_message_id is not None:
+                            if emitter.has_block(current_message_id):
+                                for be in emitter.end_block(
+                                    current_message_id
+                                ):
+                                    yield be
+                            # else: already finalized (e.g. by a preceding
+                            # tool_called) — avoid re-emitting.
+                        elif text:
+                            for be in emitter.full_text_block(text):
+                                yield be
+                        current_message_id = None
 
                     elif name == "tool_called":
                         raw = getattr(item, "raw_item", None)
                         call_id = getattr(raw, "call_id", None) or uuid4().hex
-                        tool_call_id = uuid4().hex
-                        tool_call_ids[call_id] = tool_call_id
-                        yield ToolStart(
-                            run_id=run_id,
-                            seq=seq.next(),
-                            tool_call_id=tool_call_id,
-                            name=getattr(raw, "name", "tool"),
+                        tool_id = uuid4().hex
+                        tool_call_ids[call_id] = tool_id
+                        for te in emitter.tool_start(
+                            tool_id=tool_id,
+                            tool_name=getattr(raw, "name", "tool"),
                             arguments=_safe_json_args(
                                 getattr(raw, "arguments", None)
                             ),
-                        )
+                        ):
+                            yield te
 
                     elif name == "tool_output":
                         raw = getattr(item, "raw_item", None)
                         call_id = _coerce_call_id(raw)
-                        tool_call_id = tool_call_ids.pop(
-                            call_id, uuid4().hex
-                        )
-                        yield ToolEnd(
-                            run_id=run_id,
-                            seq=seq.next(),
-                            tool_call_id=tool_call_id,
-                            name=_resolve_tool_name(raw, item),
+                        tool_id = tool_call_ids.pop(call_id, uuid4().hex)
+                        for te in emitter.tool_end(
+                            tool_id=tool_id,
+                            tool_name=_resolve_tool_name(raw, item),
                             output=_jsonable(getattr(item, "output", None)),
-                        )
+                        ):
+                            yield te
 
                     # `handoff_requested`, `handoff_occured`,
                     # `mcp_*`, `reasoning_item_created`, `tool_search_*`
@@ -235,22 +218,19 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
 
                 elif isinstance(ev, AgentUpdatedStreamEvent):
                     # A handoff just changed the active agent. Surface as
-                    # state.update so the UI can show "now talking to: X".
-                    yield StateUpdate(
-                        run_id=run_id,
-                        seq=seq.next(),
-                        key="active_agent",
-                        value=getattr(ev.new_agent, "name", ""),
-                    )
+                    # state_update so the UI can show "now talking to: X".
+                    for se in emitter.state_update(
+                        "active_agent", getattr(ev.new_agent, "name", "")
+                    ):
+                        yield se
 
         except Exception as e:
-            yield ErrorEvent(
-                run_id=run_id,
-                seq=seq.next(),
-                message=f"OpenAI Agents stream failed: {e}",
+            for ev in emitter.error(
+                f"OpenAI Agents stream failed: {e}",
                 recoverable=False,
                 details={"exception_type": type(e).__name__},
-            )
+            ):
+                yield ev
             return
         finally:
             self._cancel_signals.pop(run_id, None)
@@ -259,12 +239,8 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
         if result is not None:
             final_output = _jsonable(getattr(result, "final_output", None))
 
-        yield RunCompleted(
-            run_id=run_id,
-            seq=seq.next(),
-            agent_id=self._manifest.agent_id,
-            output=final_output,
-        )
+        for ev in emitter.run_end(output=final_output):
+            yield ev
 
     # ------------------------------------------------------------------
     # Introspection
@@ -316,21 +292,6 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-class _SeqCounter:
-    __slots__ = ("_n",)
-
-    def __init__(self) -> None:
-        self._n = -1
-
-    def next(self) -> int:
-        self._n += 1
-        return self._n
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-
 
 def _safe_input_for_event(value: Any) -> dict[str, Any]:
     coerced = _jsonable(value)

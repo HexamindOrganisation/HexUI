@@ -74,16 +74,18 @@ def test_ui_yaml_returns_file_when_present(
     assert r.text == payload
 
 
-def test_invoke_returns_run_completed(client: TestClient) -> None:
+def test_invoke_returns_run_end(client: TestClient) -> None:
     r = client.post("/agents/my-fake/invoke", json={"input": "hi"})
     assert r.status_code == 200
     body = r.json()
-    assert body["type"] == "run.completed"
+    assert body["event_type"] == "run_end"
     assert body["output"] == {"ok": True}
+    # The terminal event also carries the assembled run result.
+    assert body["result"]["message"] == "Hello world"
 
 
 def test_stream_sse_sequence(client: TestClient) -> None:
-    """End-to-end: ordered SSE event stream with monotonic seq."""
+    """End-to-end: ordered SSE event stream with monotonic sequence."""
     with client.stream(
         "POST", "/agents/my-fake/stream", json={"input": "hi"}
     ) as r:
@@ -108,19 +110,25 @@ def test_stream_sse_sequence(client: TestClient) -> None:
 
     types = [t for t, _ in frames]
     assert types == [
-        "run.started",
-        "message.delta",
-        "message.delta",
-        "tool.start",
-        "tool.end",
-        "message.completed",
-        "run.completed",
+        "run_start",
+        "block_start",
+        "block_delta",
+        "block_delta",
+        "block_end",
+        "tool_start",
+        "tool_end",
+        "run_end",
     ]
 
-    # Seq numbers are 0..N monotonically.
-    seqs = [d["seq"] for _, d in frames]
-    assert seqs == list(range(len(seqs)))
+    # The SSE `event:` name mirrors the payload's `event_type`.
+    assert all(evt == d["event_type"] for evt, d in frames)
 
-    # All events share the same run_id.
+    # Sequence numbers are strictly increasing (persisted steps share the
+    # counter, so wire events are monotonic but not contiguous).
+    seqs = [d["sequence"] for _, d in frames]
+    assert all(b > a for a, b in zip(seqs, seqs[1:]))
+
+    # All events share the same run_id, and a flat run is its own root.
     run_ids = {d["run_id"] for _, d in frames}
     assert len(run_ids) == 1
+    assert all(d["root_run_id"] == d["run_id"] for _, d in frames)
