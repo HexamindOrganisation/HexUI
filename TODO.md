@@ -40,13 +40,11 @@ Each one exercises the abstraction; expect event-schema tweaks.
 - [x] OpenAI Agents SDK adapter
 - [x] Google ADK adapter
 - [x] LangGraph / DeepAgents (aliases to the LangChain adapter; both produce `CompiledStateGraph`)
-- [ ] Pydantic AI
 
 ### Control / HITL
 
 - [x] `cancel(run_id)` on the protocol + `POST /agents/{id}/runs/{run_id}/cancel` route (event-boundary cancellation; in-memory state, see README limitations)
 - [x] `approval_requested`/`approval_resolved` events, `resume()` protocol hook, `POST .../approvals/{id}` endpoint, and a reference suspend/resume loop in `FakeRuntime`
-- [ ] `approval_requested` flow: wire into framework adapters' policy layer (no framework adapter emits it yet) + resume over subprocess IPC
 - [ ] `approval_requested` flow: surface to UI (front-app translate + approval prompt widget)
 - [ ] Tool execution gating ("require approval before tool X")
 
