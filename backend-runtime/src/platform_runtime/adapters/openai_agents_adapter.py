@@ -48,6 +48,7 @@ from ..protocol import (
     UnifiedAgentRuntime,
 )
 from . import register_adapter
+from .credentials_cache import CredentialsCache
 
 
 @register_adapter("openai-agents")
@@ -64,30 +65,25 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
         self._manifest = manifest
         self._root = root
         self._factory = factory
-        self._agent: Agent | None = None
-        self._lock = asyncio.Lock()
+
+        def _validate(result: Any) -> None:
+            if not isinstance(result, Agent):
+                raise TypeError(
+                    f"Factory '{self._manifest.agent_callable}' returned "
+                    f"{type(result).__name__}, expected agents.Agent."
+                )
+
+        self._agents = CredentialsCache(factory, validator=_validate)
         self._cancel_signals: dict[str, asyncio.Event] = {}
 
     # ------------------------------------------------------------------
     # Lazy agent construction
     # ------------------------------------------------------------------
 
-    async def _get_agent(self) -> Agent:
-        if self._agent is not None:
-            return self._agent
-        async with self._lock:
-            if self._agent is not None:
-                return self._agent
-            result = self._factory()
-            if inspect.isawaitable(result):
-                result = await result
-            if not isinstance(result, Agent):
-                raise TypeError(
-                    f"Factory '{self._manifest.agent_callable}' returned "
-                    f"{type(result).__name__}, expected agents.Agent."
-                )
-            self._agent = result
-            return result
+    async def _get_agent(self, context: dict[str, Any] | None = None) -> Agent:
+        """Per-credentials Agent. Pass `request.context` from `stream()`;
+        `tools()`/`health()` pass nothing (no user context)."""
+        return await self._agents.get(context or {})
 
     # ------------------------------------------------------------------
     # Streaming: the core method
@@ -110,7 +106,7 @@ class OpenAIAgentsAdapter(UnifiedAgentRuntime):
             yield ev
 
         try:
-            agent = await self._get_agent()
+            agent = await self._get_agent(request.context)
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
             for ev in emitter.error(

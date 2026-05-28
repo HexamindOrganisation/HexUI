@@ -46,6 +46,7 @@ from ..protocol import (
     UnifiedAgentRuntime,
 )
 from . import register_adapter
+from .credentials_cache import CredentialsCache
 
 
 @register_adapter("langchain", "langgraph", "deepagents")
@@ -62,8 +63,19 @@ class LangChainAdapter(UnifiedAgentRuntime):
         self._manifest = manifest
         self._root = root
         self._factory = factory
-        self._runnable: Runnable | None = None
-        self._lock = asyncio.Lock()  # guards lazy factory() call
+
+        def _validate(result: Any) -> None:
+            if not isinstance(result, Runnable):
+                raise TypeError(
+                    f"Factory '{self._manifest.agent_callable}' returned "
+                    f"{type(result).__name__}, expected a LangChain Runnable."
+                )
+
+        # Per-credentials runnable cache. When `request.context.credentials` is
+        # set AND the factory accepts a `credentials` kwarg, the cache builds
+        # one runnable per credential-hash. Otherwise it collapses to a single
+        # cached entry — identical to the pre-credentials behavior.
+        self._runnables = CredentialsCache(factory, validator=_validate)
         # run_id → cancel signal. Populated when `stream()` begins, popped
         # in its `finally`. `cancel()` sets the matching event.
         self._cancel_signals: dict[str, asyncio.Event] = {}
@@ -72,29 +84,14 @@ class LangChainAdapter(UnifiedAgentRuntime):
     # Lazy runnable construction
     # ------------------------------------------------------------------
 
-    async def _get_runnable(self) -> Runnable:
-        """Call the factory once, then cache the resulting Runnable.
+    async def _get_runnable(self, context: dict[str, Any] | None = None) -> Runnable:
+        """Get (and lazily build) the runnable for this request's credentials.
 
-        The factory may be sync or async. We accept both because agent
-        authors writing LCEL chains tend to write sync factories, while
-        authors using async-only model clients write async ones.
+        Pass `request.context` from `stream()` so per-user credentials route
+        to a credential-specific runnable. `tools()` and `health()` pass
+        nothing — they introspect or probe with no user context.
         """
-        if self._runnable is not None:
-            return self._runnable
-
-        async with self._lock:
-            if self._runnable is not None:
-                return self._runnable
-            result = self._factory()
-            if inspect.isawaitable(result):
-                result = await result
-            if not isinstance(result, Runnable):
-                raise TypeError(
-                    f"Factory '{self._manifest.agent_callable}' returned "
-                    f"{type(result).__name__}, expected a LangChain Runnable."
-                )
-            self._runnable = result
-            return result
+        return await self._runnables.get(context or {})
 
     # ------------------------------------------------------------------
     # Streaming: the core method
@@ -117,7 +114,7 @@ class LangChainAdapter(UnifiedAgentRuntime):
             yield ev
 
         try:
-            runnable = await self._get_runnable()
+            runnable = await self._get_runnable(request.context)
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
             for ev in emitter.error(

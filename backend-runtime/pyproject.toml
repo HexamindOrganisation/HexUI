@@ -34,3 +34,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/platform_runtime"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.14",
+]

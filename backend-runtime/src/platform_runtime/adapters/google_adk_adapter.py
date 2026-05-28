@@ -54,6 +54,7 @@ from ..protocol import (
     UnifiedAgentRuntime,
 )
 from . import register_adapter
+from .credentials_cache import CredentialsCache
 
 # Normalized roles → ADK Content roles. ADK has no `Content(role="system")`;
 # system instructions belong on the Agent (`instruction=...`) not in the
@@ -75,52 +76,44 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
         self._manifest = manifest
         self._root = root
         self._factory = factory
-        self._agent: Agent | None = None
-        self._runner: Runner | None = None
-        self._session_service: InMemorySessionService | None = None
-        self._lock = asyncio.Lock()
+        # One shared session service across credentials. In-memory sessions
+        # keep us from depending on external storage for the first iteration.
+        self._session_service: InMemorySessionService = InMemorySessionService()
         self._cancel_signals: dict[str, asyncio.Event] = {}
 
-    # ------------------------------------------------------------------
-    # Lazy agent / runner construction
-    # ------------------------------------------------------------------
-
-    async def _get_runner(self) -> Runner:
-        """Build the agent + runner on first use, cache for the rest.
-
-        We build the runner here (not in the factory) because the platform
-        owns operational concerns: session storage, app naming, etc. The
-        agent author writes a `build_agent()` that returns an `Agent`; the
-        adapter wraps it with a runner.
-        """
-        if self._runner is not None:
-            return self._runner
-
-        async with self._lock:
-            if self._runner is not None:
-                return self._runner
-
-            result = self._factory()
-            if inspect.isawaitable(result):
-                result = await result
+        def _validate(result: Any) -> None:
             if not isinstance(result, Agent):
                 raise TypeError(
                     f"Factory '{self._manifest.agent_callable}' returned "
                     f"{type(result).__name__}, expected google.adk.Agent."
                 )
 
-            self._agent = result
-            # In-memory sessions keep us from depending on external storage
-            # for the first iteration. Multi-host deployments will inject
-            # a real SessionService via a future constructor argument.
-            self._session_service = InMemorySessionService()
-            self._runner = Runner(
+        async def _wrap_in_runner(agent: Agent) -> Runner:
+            # The platform owns operational concerns (sessions, app naming) so
+            # the agent author writes a `build_agent()` that returns an Agent;
+            # the adapter wraps it with a Runner here. We do this in the cache
+            # builder so each per-credentials agent gets its own runner.
+            return Runner(
                 app_name=self._manifest.agent_id,
-                agent=self._agent,
+                agent=agent,
                 session_service=self._session_service,
                 auto_create_session=True,
             )
-            return self._runner
+
+        self._runners = CredentialsCache(
+            factory, validator=_validate, builder=_wrap_in_runner
+        )
+
+    # ------------------------------------------------------------------
+    # Lazy agent / runner construction
+    # ------------------------------------------------------------------
+
+    async def _get_runner(self, context: dict[str, Any] | None = None) -> Runner:
+        """Per-credentials Runner (each wraps its own per-credentials Agent).
+
+        Pass `request.context` from `stream()`; `tools()`/`health()` pass
+        nothing (no user context)."""
+        return await self._runners.get(context or {})
 
     # ------------------------------------------------------------------
     # Streaming: the core method
@@ -141,7 +134,7 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
             yield ev
 
         try:
-            runner = await self._get_runner()
+            runner = await self._get_runner(request.context)
         except Exception as e:
             self._cancel_signals.pop(run_id, None)
             for ev in emitter.error(
@@ -170,6 +163,7 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
                     f"last message must have role='user'; got {last.get('role')!r}"
                 )
             await self._populate_session(
+                runner=runner,
                 user_id=user_id,
                 session_id=session_id,
                 history=messages[:-1],
@@ -402,6 +396,7 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
     async def _populate_session(
         self,
         *,
+        runner: Runner,
         user_id: str,
         session_id: str,
         history: list[dict[str, Any]],
@@ -418,10 +413,7 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
         `build_agent()`; carrying them in history would either confuse
         the model or duplicate the static instruction.
         """
-        assert self._session_service is not None
-        assert self._agent is not None
-
-        agent_name = self._agent.name
+        agent_name = runner.agent.name
         app_name = self._manifest.agent_id
 
         session = await self._session_service.create_session(
@@ -445,8 +437,10 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
             await self._session_service.append_event(session=session, event=ev)
 
     async def aclose(self) -> None:
-        runner = self._runner
-        if runner is not None:
+        # Close every per-credentials runner the cache built. ADK runners
+        # hold no shared state we care about across creds — each one closes
+        # independently.
+        for runner in list(self._runners._entries.values()):  # noqa: SLF001
             try:
                 close = getattr(runner, "close", None)
                 if close is not None:
@@ -455,9 +449,7 @@ class GoogleADKAdapter(UnifiedAgentRuntime):
                         await result
             except Exception:
                 pass
-        self._runner = None
-        self._agent = None
-        self._session_service = None
+        self._runners._entries.clear()  # noqa: SLF001
 
 
 # ---------------------------------------------------------------------------

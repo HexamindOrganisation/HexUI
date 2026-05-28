@@ -50,6 +50,25 @@ class InvokeRequest(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict)
 
 
+class Credentials(BaseModel):
+    """Per-user credentials passed through `InvokeRequest.context.credentials`.
+
+    The platform backend decrypts the requesting user's API keys and forwards
+    them here. Adapters that opt in read this struct and pass each value into
+    the underlying framework client at agent-construction time. Adapters that
+    don't opt in (no `credentials` kwarg on the agent factory) keep using
+    process env vars as before — backwards compatible.
+
+    All fields are optional: a user may only have set the key for one
+    provider. Unknown providers stay out of this struct on purpose (the runtime
+    has a closed set of supported frameworks).
+    """
+
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    google_api_key: str | None = None
+
+
 class ToolDescriptor(BaseModel):
     """Framework-agnostic description of a tool the agent can call.
 
