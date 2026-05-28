@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from .. import runtime_client
 from ..db import dispose_engine, init_engine
 from ..routes import auth as auth_routes
+from ..routes import chat as chat_routes
 from ..routes import conversations as conversations_routes
 from ..routes import folders as folders_routes
 from ..routes import me as me_routes
@@ -43,5 +44,6 @@ def create_app() -> FastAPI:
     app.include_router(me_keys_routes.router)
     app.include_router(folders_routes.router)
     app.include_router(conversations_routes.router)
+    app.include_router(chat_routes.router)
     app.include_router(proxy_routes.router)
     return app

@@ -22,7 +22,6 @@ The registry hands us a `factory` (named in the manifest under
 from __future__ import annotations
 
 import asyncio
-import inspect
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable
 from uuid import uuid4

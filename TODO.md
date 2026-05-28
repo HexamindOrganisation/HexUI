@@ -65,8 +65,8 @@ framework-blind.
 - [x] LangChain / LangGraph / DeepAgents input translation (`messages` → LC message classes)
 - [x] OpenAI Agents SDK input translation (`messages` → input-item list)
 - [x] Google ADK input translation (session replay via `append_event`; in progress)
-- [ ] Per-user credentials via `InvokeRequest.context.credentials`; each adapter forwards into framework client construction
-- [ ] Per-call runnable/agent construction when credentials differ (cache keyed on credential hash)
+- [x] Per-user credentials via `InvokeRequest.context.credentials`; each adapter forwards into framework client construction
+- [x] Per-call runnable/agent construction when credentials differ (cache keyed on credential hash)
 - [ ] Tests: one multi-message round-trip per adapter
 
 ---
@@ -82,18 +82,18 @@ post-v0.
 
 Stack: FastAPI + SQLAlchemy + **PostgreSQL** + Alembic.
 
-- [ ] Service scaffold (`platform-backend/`), FastAPI app, Alembic init, Postgres connection + docker-compose for local dev
-- [ ] User model + `POST /auth/signup`, `POST /auth/login` (email + password, argon2id), JWT middleware, `GET /me`
-- [ ] Per-user API keys: encrypted at rest (Fernet, master key from env); `GET/PUT/DELETE /me/keys/:provider`
-- [ ] Folders (flat, one level): `GET/POST/PATCH/DELETE /folders`
-- [ ] Conversations (per user, one `agent_id` each): `GET/POST/PATCH/DELETE /conversations`, `GET /conversations/:id/messages`
-- [ ] Message persistence (user + assistant final content; `run_id` for trace correlation)
-- [ ] Runtime proxy: `GET /agents`, `/agents/:id/{metadata,tools,health,ui}` passthrough
-- [ ] Chat route `POST /conversations/:id/messages` → assemble history into `{messages:[...]}`, inject user creds, proxy runtime SSE, save assistant message as it streams
-- [ ] Cancel proxy `POST /conversations/:id/cancel`
-- [ ] Action proxy `POST /conversations/:id/actions/:name`
-- [ ] Conversation auto-titling (heuristic: truncate first user message)
-- [ ] pytest suite for auth + conversations CRUD + proxy
+- [x] Service scaffold (`platform-backend/`), FastAPI app, Alembic init, Postgres connection + docker-compose for local dev
+- [x] User model + `POST /auth/signup`, `POST /auth/login` (email + password, argon2id), JWT middleware, `GET /me`
+- [x] Per-user API keys: encrypted at rest (Fernet, master key from env); `GET/PUT/DELETE /me/keys/:provider`
+- [x] Folders (flat, one level): `GET/POST/PATCH/DELETE /folders`
+- [x] Conversations (per user, one `agent_id` each): `GET/POST/PATCH/DELETE /conversations`, `GET /conversations/:id/messages`
+- [x] Message persistence (user + assistant final content; `run_id` for trace correlation)
+- [x] Runtime proxy: `GET /agents`, `/agents/:id/{metadata,tools,health,ui}` passthrough
+- [x] Chat route `POST /conversations/:id/messages` → assemble history into `{messages:[...]}`, inject user creds, proxy runtime SSE, save assistant message as it streams
+- [x] Cancel proxy `POST /conversations/:id/cancel`
+- [x] Action proxy `POST /conversations/:id/actions/:name`
+- [x] Conversation auto-titling (heuristic: truncate first user message)
+- [x] pytest suite for auth + conversations CRUD + proxy
 
 ### Post-v0 (full control plane)
 
