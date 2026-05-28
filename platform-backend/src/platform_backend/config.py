@@ -22,8 +22,8 @@ class Settings(BaseSettings):
         description="Async SQLAlchemy URL for the primary database.",
     )
     jwt_secret: str = Field(
-        default="dev-only-change-me",
-        description="HS256 signing secret. Override in production.",
+        default="dev-only-change-me-dev-only-change-me",
+        description="HS256 signing secret. Override in production (>=32 bytes).",
     )
     jwt_expiry_seconds: int = 60 * 60 * 24  # 24h
     fernet_key: str = Field(

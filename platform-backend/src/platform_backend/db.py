@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import AsyncIterator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -19,6 +20,21 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from .config import get_settings
+
+
+def _attach_sqlite_fk_pragma(engine: AsyncEngine) -> None:
+    """SQLite ignores FK constraints unless told otherwise — Postgres
+    enforces them always, so flipping this for SQLite makes the two
+    dialects behave the same in tests. No-op for non-sqlite engines.
+    """
+    if engine.url.get_backend_name() != "sqlite":
+        return
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _pragma_on_connect(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 class Base(DeclarativeBase):
@@ -35,6 +51,7 @@ def init_engine(database_url: str | None = None) -> AsyncEngine:
     global _engine, _session_factory
     url = database_url or get_settings().database_url
     _engine = create_async_engine(url, future=True, pool_pre_ping=True)
+    _attach_sqlite_fk_pragma(_engine)
     _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
     return _engine
 
