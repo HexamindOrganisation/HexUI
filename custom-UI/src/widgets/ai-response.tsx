@@ -178,7 +178,15 @@ function GooFilter(): JSX.Element {
   return (
     <svg width="0" height="0" aria-hidden focusable="false" className="absolute">
       <defs>
-        <filter id="hx-goo">
+        {/* Generous filter region — the default (-10%/120%) clips the blurred,
+            scaled dots (notably at the bottom). */}
+        <filter
+          id="hx-goo"
+          x="-50%"
+          y="-50%"
+          width="200%"
+          height="200%"
+        >
           <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b" />
           <feColorMatrix
             in="b"

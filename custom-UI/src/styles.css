@@ -294,12 +294,16 @@
 .hx-goo {
   position: relative;
   width: 58px;
-  height: 18px;
+  /* Taller than the 16px dots so the scaled (1.32×) metaballs have vertical
+   * room; the dots are centered, and the filter region (set on #hx-goo) is
+   * generous so the blur isn't clipped. */
+  height: 28px;
+  overflow: visible;
   filter: url(#hx-goo);
 }
 .hx-goo span {
   position: absolute;
-  top: 1px;
+  top: 6px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
