@@ -7,12 +7,13 @@ import {
   type ConversationMessage,
 } from "../runtime/context.js";
 import type { AgentEvent } from "../runtime/agentBridge.js";
-import { cn } from "../lib/utils.js";
 
 interface PartialMessage {
   id: string;
   content: string;
 }
+
+const ACCENT = "var(--accent-color, hsl(var(--primary)))";
 
 export function AiResponseWidgetComponent({
   props,
@@ -38,8 +39,6 @@ export function AiResponseWidgetComponent({
           return next;
         });
       } else if (event.kind === "message") {
-        // Finalized — provider has appended it to the conversation log.
-        // Drop the partial (if any) so we don't double-render.
         const id = event.messageId;
         if (!id) return;
         setPartials((prev) => prev.filter((p) => p.id !== id));
@@ -68,32 +67,82 @@ export function AiResponseWidgetComponent({
   }
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex max-h-[28rem] flex-col gap-3 overflow-auto"
-    >
+    <div ref={scrollRef} className="flex max-h-[34rem] flex-col gap-6 overflow-auto pr-1">
+      <GooFilter />
       {log.map((m) => (
-        <Bubble key={m.id} role={m.role} content={m.content} />
+        <Turn key={m.id} role={m.role} content={m.content} />
       ))}
       {partials.map((p) => (
-        <Bubble key={p.id} role="assistant" content={p.content} partial />
+        <Turn key={p.id} role="assistant" content={p.content} streaming />
       ))}
       {status === "thinking" && partials.length === 0 && (
-        <ThinkingIndicator
+        <Thinking
           mode={props.thinking_indicator ?? "dots"}
-          text={props.thinking_text ?? "…thinking"}
+          text={props.thinking_text ?? "Thinking"}
         />
-      )}
-      {status === "responding" && partials.length === 0 && (
-        <div className="text-xs italic text-muted-foreground">
-          {props.responding_text ?? "…responding"}
-        </div>
       )}
     </div>
   );
 }
 
-function ThinkingIndicator({
+/**
+ * One conversation turn. User turns are a right-aligned bordered card (`.ucard`);
+ * assistant turns are an agent-color avatar + accent tick, then prose on the
+ * canvas (no bubble), with a blinking block caret while streaming.
+ */
+function Turn({
+  role,
+  content,
+  streaming,
+}: {
+  role: ConversationMessage["role"];
+  content: string;
+  streaming?: boolean;
+}): JSX.Element {
+  if (role === "user") {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[78%] whitespace-pre-wrap break-words rounded-[var(--radius)] border border-border bg-card px-4 py-2.5 text-[15px] leading-relaxed">
+          {content}
+        </div>
+      </div>
+    );
+  }
+  if (role === "system") {
+    return (
+      <div className="flex justify-center">
+        <div className="rounded-md bg-muted px-3 py-1 text-xs italic text-muted-foreground">
+          {content}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex gap-3.5">
+      <span
+        aria-hidden
+        className="mt-0.5 h-[30px] w-[30px] shrink-0 rounded-[8px]"
+        style={{ background: ACCENT }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="h-[2px] w-5 rounded-sm"
+            style={{ background: ACCENT }}
+          />
+        </div>
+        <div className="whitespace-pre-wrap break-words text-[15px] leading-[1.68] text-foreground">
+          {content}
+          {streaming && <span className="hx-caret" aria-hidden />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Thinking: avatar pulse + shimmering status + the liquid metaball loader. */
+function Thinking({
   mode,
   text,
 }: {
@@ -102,61 +151,41 @@ function ThinkingIndicator({
 }): JSX.Element | null {
   if (mode === "none") return null;
   if (mode === "text") {
-    return <div className="text-xs italic text-muted-foreground">{text}</div>;
+    return <div className="hx-shimmer text-[13px] font-medium">{text}…</div>;
   }
   return (
-    <div
-      role="status"
-      aria-label={text}
-      className="flex items-center gap-1 px-3.5 py-2"
-    >
-      <Dot delay="0ms" />
-      <Dot delay="150ms" />
-      <Dot delay="300ms" />
-    </div>
-  );
-}
-
-function Dot({ delay }: { delay: string }): JSX.Element {
-  return (
-    <span
-      className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60"
-      style={{ animationDelay: delay }}
-    />
-  );
-}
-
-function Bubble({
-  role,
-  content,
-  partial,
-}: {
-  role: ConversationMessage["role"];
-  content: string;
-  partial?: boolean;
-}): JSX.Element {
-  return (
-    <div
-      className={cn(
-        "flex w-full flex-col",
-        role === "user" && "items-end pl-12",
-        role === "assistant" && "items-start pr-12",
-        role === "system" && "items-center",
-      )}
-    >
+    <div className="flex gap-3.5">
       <span
-        className={cn(
-          "max-w-[min(65ch,_100%)] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm",
-          role === "user" && "bg-primary text-primary-foreground rounded-br-md",
-          role === "assistant" &&
-            "bg-accent text-accent-foreground rounded-bl-md",
-          role === "system" &&
-            "bg-muted text-xs italic text-muted-foreground shadow-none",
-          partial && "opacity-90",
-        )}
-      >
-        {content}
-      </span>
+        aria-hidden
+        className="mt-0.5 h-[30px] w-[30px] shrink-0 animate-pulse rounded-[8px]"
+        style={{ background: ACCENT }}
+      />
+      <div className="flex flex-col gap-2">
+        <span className="hx-shimmer text-[13px] font-medium">{text}…</span>
+        <div className="hx-goo" role="status" aria-label={text}>
+          <span className="d1" />
+          <span className="d2" />
+          <span className="d3" />
+        </div>
+      </div>
     </div>
+  );
+}
+
+/** The SVG goo filter that gels the three metaball dots together. */
+function GooFilter(): JSX.Element {
+  return (
+    <svg width="0" height="0" aria-hidden focusable="false" className="absolute">
+      <defs>
+        <filter id="hx-goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b" />
+          <feColorMatrix
+            in="b"
+            mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9"
+          />
+        </filter>
+      </defs>
+    </svg>
   );
 }

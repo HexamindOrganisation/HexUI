@@ -279,3 +279,95 @@
   color: hsl(var(--muted-foreground));
   font-family: ui-monospace, monospace;
 }
+
+/* ============================================================
+ * HexaUI chat — metaball thinking loader, streaming caret, status shimmer.
+ * All tint from the agent color via --accent-color (set by the theme bridge),
+ * falling back to the shadcn primary.
+ * ============================================================ */
+.hx-accent {
+  color: var(--accent-color, hsl(var(--primary)));
+}
+
+/* Liquid metaball loader: three blurred dots gooed together (#hx-goo filter
+ * rendered by the ai-response widget). */
+.hx-goo {
+  position: relative;
+  width: 58px;
+  height: 18px;
+  filter: url(#hx-goo);
+}
+.hx-goo span {
+  position: absolute;
+  top: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-color, hsl(var(--primary)));
+}
+.hx-goo .d1 {
+  left: 0;
+  animation: hx-goo-a 1.7s ease-in-out infinite;
+}
+.hx-goo .d2 {
+  left: 21px;
+  animation: hx-goo-b 1.7s ease-in-out infinite;
+}
+.hx-goo .d3 {
+  left: 42px;
+  animation: hx-goo-c 1.7s ease-in-out infinite;
+}
+@keyframes hx-goo-a {
+  0%, 100% { transform: translateX(0) scale(0.88); }
+  50% { transform: translateX(21px) scale(1.12); }
+}
+@keyframes hx-goo-b {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.32); }
+}
+@keyframes hx-goo-c {
+  0%, 100% { transform: translateX(0) scale(0.88); }
+  50% { transform: translateX(-21px) scale(1.12); }
+}
+
+/* Streaming: a bold block caret in the agent color, blinking. */
+.hx-caret {
+  display: inline-block;
+  width: 8px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -2px;
+  border-radius: 1px;
+  background: var(--accent-color, hsl(var(--primary)));
+  animation: hx-blink 1.05s steps(2, jump-none) infinite;
+}
+@keyframes hx-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Status line: a shimmer sweeping through the text while thinking. */
+.hx-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground) / 0.45) 0%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--muted-foreground) / 0.45) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hx-shimmer 1.6s linear infinite;
+}
+@keyframes hx-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hx-goo .d1, .hx-goo .d2, .hx-goo .d3,
+  .hx-caret, .hx-shimmer {
+    animation: none;
+  }
+}
