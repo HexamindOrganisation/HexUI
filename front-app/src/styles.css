@@ -112,11 +112,35 @@ body {
   transform: scale(0.985);
 }
 
+/* Empty-state greeting: words rise in, the accent rule draws from the left. */
+.hx-gword {
+  display: inline-block;
+  animation: hx-gword 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes hx-gword {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+.hx-hero-rule {
+  height: 3px;
+  width: 64px;
+  border-radius: 2px;
+  background: var(--accent-color, hsl(var(--primary)));
+  transform-origin: left;
+  animation: hx-draw 0.5s 0.1s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes hx-draw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hx-avatar::before,
   .hx-avatar > *,
   .hx-pop,
-  .hx-appear {
+  .hx-appear,
+  .hx-gword,
+  .hx-hero-rule {
     animation: none;
   }
   .hx-collapse,

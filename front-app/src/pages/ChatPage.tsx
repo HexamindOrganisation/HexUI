@@ -1,4 +1,4 @@
-import { CSSProperties, useMemo, useRef } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { AgentUI, type ConversationMessage } from "agent-ui";
@@ -8,19 +8,24 @@ import { listMessages } from "../api/conversations";
 import { useActiveAgent } from "../hooks/useActiveAgent";
 import { RuntimeBridge } from "../runtime/runtimeBridge";
 import { makeDispatcher } from "../runtime/dispatcher";
+import { Greeting } from "../components/Greeting";
 
 /**
- * The MAIN region: mounts `<AgentUI>` with the active agent's `ui.yaml` and a
- * RuntimeBridge wired to the proxy. The agent's `main_color` (theme.accent)
- * recolors the whole layout.
+ * The MAIN region. Two states:
  *
- * Keying: `<AgentUI>` is keyed by `agentId:conversationId:nonce`. It remounts on
- * agent switch, conversation select (→ seeds that conversation's stored
- * messages), or a fresh session (`n` query param) — but NOT on lazy
- * conversation-creation, because `onConversationCreated` does not navigate (the
- * URL stays on `/`, so `conversationId` and the key are unchanged), keeping the
- * in-flight stream alive. `conversationId` is read through a ref so the next
- * send targets the right conversation.
+ *  - **Greeting** (no conversation + nothing sent this session): a clean
+ *    centered greeting + composer (the agent's widgets stay hidden, per spec).
+ *  - **Chat**: mounts `<AgentUI>` with the agent's `ui.yaml` + a RuntimeBridge.
+ *
+ * First-message handoff: sending from the greeting sets `pendingFirst`, which
+ * switches to chat. The chat mount seeds the user turn via `initialMessages` and
+ * fires `bridge.onUserSubmit` exactly once (after AgentUI's transcript has
+ * subscribed), so the reply streams in — no race, no remount.
+ *
+ * Keying: `<AgentUI>` is keyed by `agentId:conversationId:nonce`. Lazy
+ * conversation-creation does NOT navigate, so the key is stable and the live
+ * stream isn't torn down; selecting an existing conversation changes the key and
+ * seeds its stored history; a new session (`n`) replays the greeting.
  */
 export function ChatPage() {
   const { agent, agentId, conversationId } = useActiveAgent();
@@ -32,6 +37,10 @@ export function ChatPage() {
   convRef.current = conversationId ?? null;
   const agentRef = useRef<string | null>(null);
   agentRef.current = agentId ?? null;
+
+  // The first message typed from the greeting, before a conversation exists.
+  const [pendingFirst, setPendingFirst] = useState<string | null>(null);
+  const firedRef = useRef<string | null>(null);
 
   const { data: yaml } = useQuery({
     queryKey: ["ui", agentId],
@@ -46,25 +55,12 @@ export function ChatPage() {
     queryFn: () => listMessages(conversationId!),
   });
 
-  const initialMessages: ConversationMessage[] | undefined = useMemo(() => {
-    if (!history) return undefined;
-    return history.map((m) => ({
-      id: m.id,
-      role: m.role,
-      content: m.content,
-      timestamp: Date.parse(m.created_at) || Date.now(),
-    }));
-  }, [history]);
-
   const bridge = useMemo(
     () =>
       new RuntimeBridge({
         getConversationId: () => convRef.current,
         getAgentId: () => agentRef.current,
         onConversationCreated: (id) => {
-          // Track the new id for subsequent sends and surface it in the
-          // sidebar. We deliberately don't navigate mid-turn — that would
-          // remount AgentUI and drop the in-flight stream.
           convRef.current = id;
           qc.invalidateQueries({ queryKey: ["conversations"] });
         },
@@ -79,11 +75,49 @@ export function ChatPage() {
     [agentId, conversationId, sessionNonce],
   );
 
-  // Wait for history too when a conversation is selected, so the transcript
-  // seeds in one mount rather than flashing empty then filling.
-  const historyPending = !!conversationId && history === undefined;
+  // Reset the pending first-message whenever the session/agent/conversation
+  // changes (e.g. New session → greeting again; selecting an existing chat).
+  useEffect(() => {
+    setPendingFirst(null);
+    firedRef.current = null;
+  }, [agentId, conversationId, sessionNonce]);
 
-  if (!agent || yaml === undefined || historyPending) {
+  // Fire the greeting's first message into the freshly-mounted bridge exactly
+  // once — but only when the chat will actually render (yaml loaded), so the
+  // transcript has mounted + subscribed (child effects run before this parent
+  // effect) and no early tokens are missed.
+  useEffect(() => {
+    if (
+      pendingFirst &&
+      typeof yaml === "string" &&
+      firedRef.current !== pendingFirst
+    ) {
+      firedRef.current = pendingFirst;
+      void bridge.onUserSubmit(pendingFirst);
+    }
+  }, [pendingFirst, yaml, bridge]);
+
+  if (!agent) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  // Greeting / new-session empty state.
+  if (!conversationId && !pendingFirst) {
+    return (
+      <Greeting
+        agent={agent}
+        sessionKey={`${agentId}:${sessionNonce}`}
+        onSend={(text) => setPendingFirst(text)}
+      />
+    );
+  }
+
+  const historyPending = !!conversationId && history === undefined;
+  if (yaml === undefined || historyPending) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         Loading…
@@ -98,8 +132,28 @@ export function ChatPage() {
     );
   }
 
-  // The chat avatar (in the agent-agnostic ai-response widget) reads the active
-  // agent's initial from this inherited, quoted-string CSS var.
+  // Seed the transcript: an existing conversation's stored messages, or the
+  // greeting's first user turn (the bridge then appends the streamed reply).
+  const initialMessages: ConversationMessage[] | undefined = conversationId
+    ? history?.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: Date.parse(m.created_at) || Date.now(),
+      }))
+    : pendingFirst
+      ? [
+          {
+            id: "first",
+            role: "user" as const,
+            content: pendingFirst,
+            timestamp: Date.now(),
+          },
+        ]
+      : undefined;
+
+  // The chat avatar (agent-agnostic widget) reads the agent's initial from this
+  // inherited, quoted-string CSS var.
   const initial = (agent.name?.trim().charAt(0) ?? "").toUpperCase();
 
   return (
