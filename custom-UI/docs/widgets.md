@@ -18,10 +18,8 @@ custom widgets, see [extending.md](./extending.md).
 | `page-header`    | Title + optional subtitle/icon       | yes        | main   |
 | `page-footer`    | Single-line footer                   | yes        | footer |
 | `button-group`   | Row/column of action buttons         | no         | main   |
-| `file-tree`      | Recursive folder/file tree           | no         | main   |
 | `ai-chat-input`  | Textarea + send → AgentBridge        | yes        | main   |
 | `ai-response`    | Live chat transcript (user + agent)  | yes        | main   |
-| `ai-history`     | List of past conversations           | yes        | main   |
 | `spacer`         | Empty cell — reserves layout space   | yes        | main   |
 | `markdown`       | Renders markdown text safely         | no         | main   |
 | `form`           | Schema-driven form → dispatcher      | no         | main   |
@@ -156,82 +154,6 @@ The 6 shadcn variants map directly to the shadcn `Button` component. Use
 
 ---
 
-## `file-tree`
-
-Recursive folder/file tree with expand/collapse, optional click-to-select on
-files, and per-row hover-revealed actions.
-
-### YAML
-
-```yaml
-- name: "Files"
-  type: "file-tree"
-  position: { horizontal: "left", vertical: "middle" }
-  size: { width: 6, height: 400 }
-
-  # Pick ONE source of nodes. Live data wins:
-  data_source:                 # optional; returns FileTreeNode[]
-    action: "list_user_files"
-    args: { root: "/home" }
-    subscribe: false
-  nodes:                       # optional; static fallback
-    - id: "1"
-      name: "report.pdf"
-      type: "file"
-      size: 245000
-
-  on_select: "open_file"       # optional; dispatched with { file: FileTreeNode } when a file is clicked
-
-  file_actions:                # optional; hover-revealed buttons on each file row
-    - name: "Open"
-      action: "open_file"
-    - name: "Rename"
-      action: "rename_file"
-    - name: "Delete"
-      action: "delete_file"
-      icon: "/assets/trash.svg"   # optional
-
-  empty_text: "No files yet"   # optional
-```
-
-### `FileTreeNode` shape
-
-```ts
-type FileTreeNode = {
-  id: string;
-  name: string;
-  type: "file" | "folder";
-  size?: number;                 // bytes; only meaningful for files
-  children?: FileTreeNode[];     // only meaningful for folders
-};
-```
-
-The shape is recursive and validated with `z.lazy`. A folder may have a
-`children` array; an empty folder is allowed (renders as an empty branch when
-expanded).
-
-### Resolution order
-
-`useAgentInbox<FileTreeNode[]>().lastPayload` *(if a `tool-call` arrived)*
-**→** `useWidgetData<FileTreeNode[]>(props.data_source).data` **→**
-`props.nodes` **→** `[]`.
-
-### Click behavior
-
-- **Folder**: click the row to toggle expansion. The chevron rotates.
-- **File**: if `on_select` is set, click invokes
-  `dispatcher.invoke(on_select, { file })`.
-- **Per-row actions**: `file_actions` buttons appear on hover (right side).
-  Each invokes `dispatcher.invoke(action, { file })`. Clicking a per-row
-  action does **not** trigger `on_select` — propagation is stopped.
-
-### Sizes
-
-The widget formats byte sizes (`245 B`, `12.4 KB`, `2.1 MB`, `1.34 GB`) when
-`size` is present on a file node.
-
----
-
 ## `ai-chat-input`
 
 User input box with two icon-only buttons stacked next to the textarea:
@@ -306,7 +228,7 @@ tokens.
   log by `ai-chat-input` on submit.
 - **Assistant** messages — left-aligned, accent-color bubbles. Pushed into
   the log by the provider when a `message` event arrives on the
-  `AgentBridge`, **or** loaded into the log by `ai-history`.
+  `AgentBridge`.
 - **System** messages — centered, muted italic. Pushed into the log on
   `error` events (and any system-role `message` events you emit).
 - **Streaming partial** — a translucent assistant bubble that grows as
@@ -331,122 +253,6 @@ The widget auto-scrolls to the bottom on every new message or token.
 If the conversation log is empty, no partial is in flight, and status is
 `idle`, the widget renders `empty_text` (or "No agent bridge connected."
 when no bridge is wired).
-
----
-
-## `ai-history`
-
-Vertical, clickable list of **past conversations** (chats), pulled from a
-host-defined data source. Selecting a conversation calls `on_select` to
-fetch its messages and loads them into the conversation log read by
-`ai-response`. Subsequent user submits and assistant replies append to the
-loaded conversation.
-
-### YAML
-
-```yaml
-- name: "history"
-  type: "ai-history"
-  position: { horizontal: "left", vertical: "middle" }
-  size: { width: 3, height: 400 }
-  data_source:                       # optional; returns ConversationSummary[]
-    action: "list_conversations"
-    args: { user_id: "u123" }        # optional
-    subscribe: true                  # optional
-  conversations:                     # optional; static fallback when no data_source
-    - { id: "c1", title: "Welcome chat" }
-  on_select: "load_conversation"     # required; invoked with { id }
-  on_new_chat: "create_conversation" # optional; invoked when "+ New chat" is clicked
-  empty_text: "No past conversations"   # optional
-```
-
-A minimalist **"+ New chat"** button is rendered at the top of the widget in
-all states (empty, loading, error, populated). Clicking it:
-
-1. Invokes `dispatcher.invoke(on_new_chat)` if `on_new_chat` is set, so the
-   host can create a new conversation server-side.
-2. Refreshes the widget's data source so the new entry appears in the list
-   (host-side: emit via `dispatcher.subscribe` or set
-   `data_source.subscribe: true` and notify subscribers; otherwise the
-   widget re-invokes the data source action).
-3. Calls `startNewConversation()` on the runtime context, clearing the
-   in-memory log and deselecting the active row.
-
-### `ConversationSummary` shape
-
-Each item the data source returns:
-
-```ts
-type ConversationSummary = {
-  id: string;          // required, unique
-  title: string;       // required, the clickable label
-  preview?: string;    // optional, sub-text under the title
-  timestamp?: number;  // optional, formatted as "Mon DD, HH:MM"
-};
-```
-
-### `on_select` action
-
-When a conversation is clicked, the widget invokes
-`dispatcher.invoke(on_select, { id })`. The result must be either:
-
-- An array: `ConversationMessage[]`, **or**
-- An object with a `messages` property: `{ messages: ConversationMessage[] }`.
-
-The `ConversationMessage` shape:
-
-```ts
-type ConversationMessage = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  timestamp: number;
-};
-```
-
-The returned messages are passed to the provider via `loadConversation(id,
-messages)`, which:
-
-1. Replaces the in-memory conversation log with the loaded messages.
-2. Sets `selectedConversationId` so `ai-history` can highlight the active
-   row.
-
-After load, `ai-response` re-renders with the loaded transcript. Continuing
-the chat appends new user/assistant turns to that log.
-
-### Highlighting the active conversation
-
-The button for the conversation whose id matches `selectedConversationId`
-gets `aria-selected="true"` and an `accent` background. Clicking another
-conversation switches the active one — the previous one's in-memory
-appendings are **lost** unless the host has persisted them (typically by
-intercepting `pushUserMessage` and assistant `message` events to write to
-storage).
-
-### Reading the log from custom code
-
-```ts
-import { useConversation } from "agent-ui";
-
-function MyView() {
-  const { messages } = useConversation();
-  return <pre>{JSON.stringify(messages, null, 2)}</pre>;
-}
-```
-
-To trigger conversation loading from your own widget:
-
-```ts
-import { useAgentUIContext, type ConversationMessage } from "agent-ui";
-
-function MyConversationPicker() {
-  const { loadConversation, startNewConversation } = useAgentUIContext();
-  // Load an existing conversation:
-  loadConversation("conversation-id", messages);
-  // Or clear the log and start fresh:
-  startNewConversation();
-}
-```
 
 ---
 
@@ -919,23 +725,24 @@ without bloating `ai-response`.
 The `AgentBridge` can push a typed payload directly to any widget by name:
 
 ```ts
-emit({ kind: "tool-call", widget: "Files", payload: [/* FileTreeNode[] */] });
+emit({ kind: "tool-call", widget: "tool-calls", payload: { phase: "start", id: "abc", name: "search" } });
 ```
 
-That payload becomes available to the widget named `"Files"` via:
+That payload becomes available to the widget named `"tool-calls"` via:
 
 ```tsx
-const { lastPayload, history } = useAgentInbox<FileTreeNode[]>();
+const { lastPayload, history } = useAgentInbox<ToolCallPayload>();
 ```
 
 `tool-call.widget` is **required** — events without it (or with a name not
 matching any widget in the plan) are dropped with a diagnostic.
 
-The two widgets that already wire this up are:
+The built-in widget that already wires this up is:
 
-- `file-tree` — `lastPayload` (if any) wins over `data_source` and static
-  `nodes`.
-- Custom widgets you build — see [extending.md](./extending.md).
+- `tool-calls` — folds the inbox `history` into one row per call `id`.
+
+Custom widgets you build can do the same — see
+[extending.md](./extending.md).
 
 ---
 
@@ -964,27 +771,15 @@ widgets:
       - { label: "Refresh", action: "refresh", variant: "outline" }
       - { label: "New",     action: "create",  variant: "default" }
 
-  - name: "Files"
-    type: "file-tree"
-    position: { horizontal: "left", vertical: "middle" }
-    size: { width: 6, height: 400 }
-    data_source: { action: "list_user_files" }
-    on_select: "open_file"
-    file_actions:
-      - { name: "Open",   action: "open_file" }
-      - { name: "Delete", action: "delete_file" }
-
-  - name: "history"
-    type: "ai-history"
-    position: { horizontal: "right", vertical: "middle" }
-    size: { width: 3, height: 400 }
-    data_source: { action: "list_conversations" }
-    on_select: "load_conversation"
-
   - name: "agent-output"
     type: "ai-response"
+    position: { horizontal: "left", vertical: "middle" }
+    size: { width: 8, height: 400 }
+
+  - name: "tool-calls"
+    type: "tool-calls"
     position: { horizontal: "right", vertical: "middle" }
-    size: { width: 3, height: 400 }
+    size: { width: 4, height: 400 }
 
   - name: "chat-input"
     type: "ai-chat-input"
@@ -1000,4 +795,4 @@ widgets:
 
 The grid packer places `vertical: "high"` items first, then `middle`, then
 `low`, packing left-to-right within each row. `width` numbers add to 12 per
-row (header 8 + actions 4, files 6 + history 6, etc.).
+row (header 8 + actions 4, agent-output 8 + tool-calls 4, etc.).

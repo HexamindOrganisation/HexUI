@@ -45,7 +45,7 @@ import "agent-ui/style.css";
 
 const dispatcher: ActionDispatcher = {
   async invoke(action, args) {
-    if (action === "list_user_files") return await fetch("/api/files").then(r => r.json());
+    if (action === "say_hi") alert("hi");
     return null;
   },
 };
@@ -60,11 +60,11 @@ widgets:
     size: { width: 12, height: "auto" }
     title: "My Dashboard"
 
-  - name: "Files"
-    type: "file-tree"
-    size: { width: 12, height: 400 }
-    data_source: { action: "list_user_files" }
-    on_select: "open_file"
+  - name: "actions"
+    type: "button-group"
+    size: { width: 12, height: "auto" }
+    buttons:
+      - { label: "Say hi", action: "say_hi" }
 `;
 
 export default function App() {
@@ -111,15 +111,14 @@ serializable and snapshot-testable.
 | `page-header`    | Title + optional subtitle/icon                |
 | `page-footer`    | Single-line footer                            |
 | `button-group`   | Row/column of action buttons (shadcn)         |
-| `file-tree`      | Recursive folder/file tree                    |
 | `ai-chat-input`  | Textarea + send → `AgentBridge`               |
 | `ai-response`    | Live chat transcript (user + agent + tokens)  |
-| `ai-history`     | List of past conversations                    |
 | `spacer`         | Empty cell — reserves layout space            |
 | `markdown`       | Renders markdown text safely (no HTML / no JS execution) |
 | `form`           | Schema-driven form → dispatcher action        |
 | `metrics`        | Strip of stat cards bound to a data source    |
 | `table`          | Scrollable CSV table (head/tail rows)         |
+| `tool-calls`     | Live log of agent tool invocations            |
 
 See [docs/widgets.md](./docs/widgets.md) for each widget's YAML schema and
 behavior.

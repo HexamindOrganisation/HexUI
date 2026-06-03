@@ -68,15 +68,15 @@ page:
 ## Common widget fields
 
 ```yaml
-- name: "Files"                  # required; unique within the config
-  type: "file-tree"              # required; widget discriminator (see widgets.md)
+- name: "agent-output"           # required; unique within the config
+  type: "ai-response"            # required; widget discriminator (see widgets.md)
   position:                      # optional; layout-specific hints
     horizontal: "left"           #   left | right | center
     vertical: "high"             #   high | middle | low
   size:                          # required
     width: 6                     #   1..12 (grid columns; ignored by flex/tabs)
     height: 400                  #   pixels, or "auto"
-  tab: "Files"                   # optional; only used by layout_type: tabs
+  tab: "Chat"                    # optional; only used by layout_type: tabs
   # ...type-specific fields, see widgets.md
 ```
 
@@ -146,14 +146,13 @@ as a grid in the main pane. Use this for app-shell dashboards.
 page:
   layout_type: "sidebar"
   main_menu:
-    - { name: "Files",    action: "view_files" }
+    - { name: "Chat",     action: "view_chat" }
     - { name: "Settings", action: "view_settings" }
 
 widgets:
-  - name: "Files"
-    type: "file-tree"
+  - name: "agent-output"
+    type: "ai-response"
     size: { width: 12, height: "auto" }
-    data_source: { action: "list_user_files" }
 ```
 
 ### `layout_type: tabs`

@@ -36,12 +36,6 @@ widgets:
     size: { width: 12, height: "auto" }
     title: "My Dashboard"
 
-  - name: "Files"
-    type: "file-tree"
-    size: { width: 6, height: 400 }
-    data_source: { action: "list_user_files" }
-    on_select: "open_file"
-
   - name: "chat-input"
     type: "ai-chat-input"
     size: { width: 12, height: "auto" }
@@ -81,7 +75,7 @@ optional bridge streams `token` / `message` / `status` / `tool-call` /
 | If you want to… | Read |
 |---|---|
 | Install and ship a "hello world" | [Getting started](./getting-started.md) |
-| Configure a `file-tree` or `ai-chat-input` | [Widgets](./widgets.md) |
+| Configure an `ai-chat-input` or `ai-response` | [Widgets](./widgets.md) |
 | Understand layouts (`grid`, `flex`, `sidebar`, `tabs`) | [YAML reference — Layouts](./yaml-reference.md#layouts) |
 | Add a custom widget type | [Extending — Custom widgets](./extending.md#custom-widgets) |
 | Read the conversation log from your code | [Extending — useConversation](./extending.md#useconversation) |

@@ -19,13 +19,10 @@ npm run example:llm
 
 ## Endpoints
 
-- `GET  /conversations` — list of conversation summaries (matches the
-  `list_conversations` action)
+- `GET  /conversations` — list of conversation summaries
 - `POST /conversations` — create a new empty conversation; returns the
-  summary (matches the `create_conversation` action wired to
-  `ai-history`'s `+ New chat` button)
-- `GET  /conversations/{id}` — messages for one conversation (matches
-  `load_conversation`)
+  summary
+- `GET  /conversations/{id}` — messages for one conversation
 - `POST /chat` — streams an OpenAI completion as plain text. Body:
   `{ "messages": [...], "conversation_id": "..." }`. When
   `conversation_id` is provided, the user message and final assistant

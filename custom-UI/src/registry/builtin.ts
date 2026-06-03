@@ -2,8 +2,6 @@ import { defineWidget } from "./register.js";
 import {
   ButtonGroupWidgetSchema,
   type ButtonGroupWidget,
-  FileTreeWidgetSchema,
-  type FileTreeWidget,
   PageHeaderWidgetSchema,
   type PageHeaderWidget,
   PageFooterWidgetSchema,
@@ -12,8 +10,6 @@ import {
   type AiChatInputWidget,
   AiResponseWidgetSchema,
   type AiResponseWidget,
-  AiHistoryWidgetSchema,
-  type AiHistoryWidget,
   SpacerWidgetSchema,
   type SpacerWidget,
   MarkdownWidgetSchema,
@@ -28,12 +24,10 @@ import {
   type ToolCallsWidget,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
-import { FileTreeWidgetComponent } from "../widgets/file-tree.js";
 import { PageHeaderWidgetComponent } from "../widgets/page-header.js";
 import { PageFooterWidgetComponent } from "../widgets/page-footer.js";
 import { AiChatInputWidgetComponent } from "../widgets/ai-chat-input.js";
 import { AiResponseWidgetComponent } from "../widgets/ai-response.js";
-import { AiHistoryWidgetComponent } from "../widgets/ai-history.js";
 import { SpacerWidgetComponent } from "../widgets/spacer.js";
 import { MarkdownWidgetComponent } from "../widgets/markdown.js";
 import { FormWidgetComponent } from "../widgets/form.js";
@@ -47,11 +41,6 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     type: "button-group",
     schema: ButtonGroupWidgetSchema,
     component: ButtonGroupWidgetComponent,
-  }),
-  defineWidget<FileTreeWidget>({
-    type: "file-tree",
-    schema: FileTreeWidgetSchema,
-    component: FileTreeWidgetComponent,
   }),
   defineWidget<PageHeaderWidget>({
     type: "page-header",
@@ -79,12 +68,6 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     type: "ai-response",
     schema: AiResponseWidgetSchema,
     component: AiResponseWidgetComponent,
-    chromeless: true,
-  }),
-  defineWidget<AiHistoryWidget>({
-    type: "ai-history",
-    schema: AiHistoryWidgetSchema,
-    component: AiHistoryWidgetComponent,
     chromeless: true,
   }),
   defineWidget<SpacerWidget>({

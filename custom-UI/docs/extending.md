@@ -79,8 +79,7 @@ export function App() {
   Ajv strips properties between branch attempts and breaks the discriminator.
   See `src/schema/widgets/form.ts` for the reference pattern.
 - For recursive schemas, declare the TS interface manually and use `$id` +
-  `$ref` in the schema. `FromSchema` doesn't infer recursive types. See
-  `src/schema/widgets/file-tree.ts`.
+  `$ref` in the schema. `FromSchema` doesn't infer recursive types.
 
 Now `type: "banner"` works in YAML:
 
@@ -107,7 +106,7 @@ defineWidget({
 ```
 
 This is what the built-in `page-header`, `page-footer`, `ai-chat-input`,
-`ai-response`, and `ai-history` widgets do.
+and `ai-response` widgets do.
 
 ### Footer-slot widgets
 
@@ -137,18 +136,18 @@ This is what the built-in `page-footer` widget does.
 ### Replacing a built-in
 
 Pass your version *after* `builtinWidgets` — later registrations win. For
-example, a custom file-tree:
+example, a custom table:
 
 ```tsx
-import { FileTreeWidgetSchema, defineWidget } from "agent-ui";
+import { TableWidgetSchema, defineWidget } from "agent-ui";
 
-const fancyFileTree = defineWidget({
-  type: "file-tree",                  // same type → overrides the built-in
-  schema: FileTreeWidgetSchema,
-  component: MyFancyFileTree,
+const fancyTable = defineWidget({
+  type: "table",                      // same type → overrides the built-in
+  schema: TableWidgetSchema,
+  component: MyFancyTable,
 });
 
-const registry = new WidgetRegistry([...builtinWidgets, fancyFileTree]);
+const registry = new WidgetRegistry([...builtinWidgets, fancyTable]);
 ```
 
 ### Widget defaults
@@ -215,7 +214,7 @@ with a diagnostic — no broadcast.
 ### `useConversation()`
 
 Reads the full conversation log (user + assistant + system, finalized only).
-The same log that backs the built-in `ai-history` widget.
+The same log that backs the built-in `ai-response` widget.
 
 ```tsx
 import { useConversation, type ConversationMessage } from "agent-ui";
@@ -278,10 +277,10 @@ const dispatcher: ActionDispatcher = {
 And in YAML:
 
 ```yaml
-- name: "Files"
-  type: "file-tree"
+- name: "stats"
+  type: "metrics"
   data_source:
-    action: "watch.files"
+    action: "watch.stats"
     subscribe: true
   size: { width: 12, height: "auto" }
 ```
@@ -332,23 +331,24 @@ structured data, and you push that data into a specific widget:
 
 ```ts
 // Server-side pseudocode
-onToolResult("list_user_files", (result) => {
-  emit({ kind: "tool-call", widget: "Files", payload: result.files });
+onToolResult("get_rows", (result) => {
+  emit({ kind: "tool-call", widget: "Results", payload: result.rows });
 });
 ```
 
-The widget named `"Files"` reads `useAgentInbox` internally:
+The widget named `"Results"` reads `useAgentInbox` internally:
 
 ```tsx
-function FileTreeWidget({ props }) {
+function ResultsWidget({ props }) {
   const { data } = useWidgetData(props.data_source);
   const { lastPayload } = useAgentInbox();
-  const nodes = lastPayload ?? data ?? props.nodes ?? [];
-  // agent updates win over the data-source fetch, which wins over static nodes
+  const rows = lastPayload ?? data ?? props.rows ?? [];
+  // agent updates win over the data-source fetch, which wins over static rows
 }
 ```
 
-That's exactly what the built-in `file-tree` widget does.
+That's exactly what the built-in `tool-calls` widget does — it folds its
+inbox `history` into one row per tool-call `id`.
 
 ## Theming
 
@@ -485,7 +485,7 @@ Every widget is wrapped in `<div class="au-widget-host" data-widget-name="…"
 data-widget-type="…">`, so scoped CSS is easy:
 
 ```css
-.au-widget-host[data-widget-type="file-tree"] {
+.au-widget-host[data-widget-type="table"] {
   background: #fafafa;
 }
 .au-widget-host[data-widget-name="Quick actions"] {
@@ -571,7 +571,7 @@ The public surface is deliberately narrow; here's what's exported:
 - **Runtime**: `ActionDispatcher`, `nullDispatcher`, `AgentBridge`, `AgentEvent`
 - **Registry**: `defineWidget`, `WidgetRegistry`, `builtinWidgets`, `WidgetDefinition`, `AnyWidgetDefinition`, `WidgetProps`
 - **Hooks**: `useWidgetData`, `useAgentInbox`, `useAgentUIContext`, `useConversation`, `ConversationMessage`
-- **Schema**: `ConfigSchema`, `buildConfigSchema`, `BuiltinWidgetSchemas`, `BuiltinWidgetType`, `BuiltinWidget`, `WidgetBaseProperties`, `WidgetBaseRequired`, plus per-widget schemas (`PageHeaderWidgetSchema`, `FileTreeWidgetSchema`, …) and types
+- **Schema**: `ConfigSchema`, `buildConfigSchema`, `BuiltinWidgetSchemas`, `BuiltinWidgetType`, `BuiltinWidget`, `WidgetBaseProperties`, `WidgetBaseRequired`, plus per-widget schemas (`PageHeaderWidgetSchema`, `TableWidgetSchema`, …) and types
 - **Compile**: `parseYaml`, `compilePlan`, `resolve`, `normalize`, `resolveTheme`, `RenderPlan`, `RenderPlanWidget`, `ResolvedConfig`, `ResolvedWidget`, `ResolvedTheme`, `ThemeTokens`, `ParseResult`, `SourceMap`
 - **Diagnostics**: `Diagnostic`, `DiagnosticSeverity`, `Result`
 

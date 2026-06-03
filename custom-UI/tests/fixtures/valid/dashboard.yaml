@@ -6,16 +6,14 @@ page:
 
 widgets:
   - name: "My Files"
-    type: "file-tree"
+    type: "markdown"
     position:
       horizontal: "left"
       vertical: "high"
     size:
       width: 6
       height: 400
-    data_source:
-      action: "list_user_files"
-    on_select: "open_file"
+    content: "# Files"
 
   - name: "My Tasks"
     type: "button-group"

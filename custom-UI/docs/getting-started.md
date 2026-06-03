@@ -166,7 +166,7 @@ const dispatcher: ActionDispatcher = {
 
 | Method | When |
 |---|---|
-| `invoke` | Widget mounts with `data_source`; button-group click; file-tree action click; ai-chat-input fallback when no AgentBridge |
+| `invoke` | Widget mounts with `data_source`; button-group click; ai-chat-input fallback when no AgentBridge |
 | `subscribe` | Widget has `data_source: { ..., subscribe: true }` — for streaming data |
 | `has` | At resolve time, to emit warnings for unknown actions |
 
@@ -228,15 +228,6 @@ const agent: AgentBridge = {
 that doesn't match any widget in the plan, are dropped with a dev-mode
 warning. This is how widget isolation is preserved.
 
-`ai-history` is *not* a renderer of the live transcript — it's a clickable
-list of past conversations from a host data source. Selecting one calls
-`loadConversation(id, messages)`, which replaces the in-memory log; the
-`ai-response` widget then re-renders with the loaded messages. The widget
-also renders a minimalist **"+ New chat"** button: clicking it invokes the
-optional `on_new_chat` action (so the host can create a conversation
-server-side), refreshes the data source, and calls `startNewConversation()`
-to clear the log.
-
 If your config has no `ai-response` widget, the agent's streaming output is
 still tracked in the conversation log (visible via `useConversation()`) but
 isn't displayed.
@@ -249,9 +240,6 @@ isn't displayed.
   the conversation log either way.
 - **`ai-response`**: shows the conversation log (user-only at first if
   there's no bridge), or `empty_text` when the log is empty.
-- **`ai-history`**: still works — its conversation list comes from your
-  `data_source` action, independent of the bridge. Selecting one loads its
-  messages directly into the log.
 - **`tool-call`** events: unreachable. Widgets that expect agent updates
   simply won't receive any, but they can still load via `data_source`.
 
@@ -268,9 +256,8 @@ const { messages } = useConversation();
 
 It's populated by `ai-chat-input` (user submits) and by the provider's
 `AgentBridge` subscription (assistant `message` events and `error` events).
-The `ai-history` widget reads from this log. Token-only streams without a
-closing `message` event do **not** appear here — emit a `message` to mark a
-turn complete.
+Token-only streams without a closing `message` event do **not** appear here
+— emit a `message` to mark a turn complete.
 
 ## Diagnostics
 

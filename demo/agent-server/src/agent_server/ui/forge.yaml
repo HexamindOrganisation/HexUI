@@ -4,20 +4,12 @@ page:
   main_color: "#56809e"
 
 widgets:
-  - name: files
-    type: file-tree
+  - name: tool-calls
+    type: tool-calls
     position: { horizontal: left, vertical: high }
     size: { width: 4, height: 520 }
-    on_select: "open_file"
-    empty_text: "No files yet."
-    nodes:
-      - id: "src"
-        name: "src"
-        type: "folder"
-        children:
-          - { id: "src/main.py", name: "main.py", type: "file" }
-          - { id: "src/utils.py", name: "utils.py", type: "file" }
-      - { id: "README.md", name: "README.md", type: "file" }
+    title: Build steps
+    empty_text: "Build & tool steps appear here."
 
   - name: transcript
     type: ai-response

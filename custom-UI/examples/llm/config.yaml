@@ -67,47 +67,15 @@ widgets:
         label: "Last latency"
         format: "duration"
 
-  - name: "Files"
-    type: "file-tree"
-    position:
-      horizontal: "left"
-      vertical: "middle"
-    size:
-      width: 3
-      height: 400
-    data_source:
-      action: "list_user_files"
-    on_select: "open_file"
-    file_actions:
-      - name: "Open"
-        action: "open_file"
-      - name: "Delete"
-        action: "delete_file"
-
   - name: "agent-output"
     type: "ai-response"
     position:
       horizontal: "left"
       vertical: "middle"
     size:
-      width: 6
+      width: 12
       height: "auto"
     empty_text: "Ask the agent something below."
-
-  - name: "history"
-    type: "ai-history"
-    position:
-      horizontal: "right"
-      vertical: "middle"
-    size:
-      width: 3
-      height: "auto"
-    data_source:
-      action: "list_conversations"
-      subscribe: true
-    on_select: "load_conversation"
-    on_new_chat: "create_conversation"
-    empty_text: "No past conversations"
 
   - name: "chat-input"
     type: "ai-chat-input"

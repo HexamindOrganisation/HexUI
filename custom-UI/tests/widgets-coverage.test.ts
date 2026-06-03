@@ -23,21 +23,6 @@ describe("widget schema coverage", () => {
           buttons: [{ label: "Refresh", action: "refresh" }],
         },
         {
-          name: "tree",
-          type: "file-tree",
-          size: { width: 4, height: 400 },
-          nodes: [
-            {
-              id: "root",
-              name: "root",
-              type: "folder",
-              children: [
-                { id: "f", name: "file.txt", type: "file", size: 12 },
-              ],
-            },
-          ],
-        },
-        {
           name: "md",
           type: "markdown",
           size: { width: 8, height: 200 },
@@ -92,12 +77,6 @@ describe("widget schema coverage", () => {
           thinking_indicator: "dots",
         },
         {
-          name: "hist",
-          type: "ai-history",
-          size: { width: 4, height: 400 },
-          on_select: "load_conv",
-        },
-        {
           name: "ftr",
           type: "page-footer",
           size: { width: 12, height: 40 },
@@ -113,8 +92,8 @@ describe("widget schema coverage", () => {
     }
     expect(plan.ok).toBe(true);
     if (!plan.ok) return;
-    // 10 main-slot widgets + 2 footer-slot widgets (page-footer, ai-chat-input)
-    expect(plan.value.widgets).toHaveLength(10);
+    // 8 main-slot widgets + 2 footer-slot widgets (page-footer, ai-chat-input)
+    expect(plan.value.widgets).toHaveLength(8);
     expect(plan.value.footer).toHaveLength(2);
   });
 
@@ -130,30 +109,6 @@ describe("widget schema coverage", () => {
           submit_action: "submit",
           fields: [
             { id: "x", label: "X", type: "not-a-field-type" },
-          ],
-        },
-      ],
-    };
-    const plan = compilePlan(config, { registry });
-    expect(plan.ok).toBe(false);
-  });
-
-  it("rejects a file-tree node with bad shape (recursive $ref)", () => {
-    const registry = new WidgetRegistry(builtinWidgets);
-    const config = {
-      page: { layout_type: "flex" as const },
-      widgets: [
-        {
-          name: "tree",
-          type: "file-tree",
-          size: { width: 6, height: 300 },
-          nodes: [
-            {
-              id: "root",
-              name: "root",
-              type: "folder",
-              children: [{ id: "kid", type: "file" /* missing name */ }],
-            },
           ],
         },
       ],
