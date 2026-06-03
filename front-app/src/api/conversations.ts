@@ -64,7 +64,6 @@ export function cancelConversation(id: string): Promise<CancelResult> {
 
 export interface ActionResult {
   result: unknown;
-  events: { widget: string; payload: unknown }[];
 }
 
 export function invokeConversationAction(

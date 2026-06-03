@@ -341,9 +341,7 @@ async def test_action_proxy_forwards_args_and_passes_response(
     h = (await signup(client))["headers"]
     cid = await _make_conv(client, h)
 
-    mock_runtime["rule"] = lambda r: httpx.Response(
-        200, json={"result": "pong", "events": [{"type": "x"}]}
-    )
+    mock_runtime["rule"] = lambda r: httpx.Response(200, json={"result": "pong"})
 
     r = await client.post(
         f"/conversations/{cid}/actions/ping",
@@ -351,7 +349,7 @@ async def test_action_proxy_forwards_args_and_passes_response(
         headers=h,
     )
     assert r.status_code == 200
-    assert r.json() == {"result": "pong", "events": [{"type": "x"}]}
+    assert r.json() == {"result": "pong"}
 
     sent = mock_runtime["requests"][-1]
     assert sent["path"] == "/agents/fake-1/actions/ping"

@@ -208,18 +208,7 @@ export class RuntimeBridge implements AgentBridge {
     if (!conversationId) {
       throw new Error("Actions require an active conversation.");
     }
-    const { result, events } = await invokeConversationAction(
-      conversationId,
-      name,
-      args,
-    );
-    for (const event of events) {
-      this.emit({
-        kind: "tool-call",
-        widget: event.widget,
-        payload: event.payload,
-      });
-    }
+    const { result } = await invokeConversationAction(conversationId, name, args);
     return result;
   };
 

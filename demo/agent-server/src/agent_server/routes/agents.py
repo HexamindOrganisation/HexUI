@@ -88,9 +88,11 @@ async def cancel(agent_id: str, body: dict[str, Any], request: Request) -> dict:
 async def invoke_action(
     agent_id: str, action_name: str, body: dict[str, Any] | None = None
 ) -> dict:
-    """Optional widget action. The reference impl just echoes the call so the
-    envelope shape (`{result, events}`) is demonstrable."""
+    """Widget action / data source. An action returns a single `{result}`; it
+    never pushes to the UI. Display widgets read their `data_source` via this
+    same endpoint, and `refresh` (declared in the ui.yaml) re-pulls them after
+    an action — see CONTRACT.md §5b. The reference impl just echoes the call."""
     if get_agent(agent_id) is None:
         raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_id}'")
     args = (body or {}).get("args", {})
-    return {"result": {"action": action_name, "args": args}, "events": []}
+    return {"result": {"action": action_name, "args": args}}

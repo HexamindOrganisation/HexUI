@@ -130,9 +130,7 @@ async def test_runtime_client_helpers_directly(_mock_runtime: dict) -> None:
     assert sent.url.path == "/agents/a/runs/r1/cancel"
     assert sent.method == "POST"
 
-    _mock_runtime["rule"] = lambda r: httpx.Response(
-        200, json={"result": "ok", "events": []}
-    )
+    _mock_runtime["rule"] = lambda r: httpx.Response(200, json={"result": "ok"})
     status, body = await runtime_client.invoke_action("a", "ping", {"x": 1})
-    assert status == 200 and body == {"result": "ok", "events": []}
+    assert status == 200 and body == {"result": "ok"}
     assert json.loads(_mock_runtime["request"].content) == {"args": {"x": 1}}

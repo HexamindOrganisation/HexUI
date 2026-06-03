@@ -40,7 +40,7 @@ All paths are relative to your backend's base URL
 | `GET /agents/{id}/ui` | per-agent `ui.yaml` (`text/yaml`) with `page.main_color` + widgets |
 | `POST /agents/{id}/stream` | SSE run — framework-tagged native events (§5) |
 | `POST /agents/{id}/cancel` | body `{run_id}` → `{cancelled: bool}` |
-| `POST /agents/{id}/actions/{name}` | optional widget action → `{result, events}` |
+| `POST /agents/{id}/actions/{name}` | widget action / data source → `{result}` (§5b) |
 
 Unknown `{id}` → `404`. (§3/§4 — roster and `ui.yaml` — are unchanged from the
 previous revision; see those sections at the end.)
@@ -94,6 +94,63 @@ The proxy may call `POST /agents/{id}/cancel` with `{"run_id": "..."}` while a
 stream is open. Stop producing events and end the stream — the proxy finalizes
 and persists the partial text. Return `{cancelled: true}` if the run was found,
 `false` otherwise.
+
+---
+
+## 5b. Widget behavior — actions & data sources
+
+Beyond the chat turn, a `ui.yaml` can wire interactive widgets. The model is
+deliberately small: **one privileged behavior the platform owns (the chat turn),
+plus exactly two dev-facing primitives — `action` (do) and `data_source`
+(display).** Widgets never run dev code in the browser; every behavior is a call
+to one of *your* actions.
+
+### `POST /agents/{id}/actions/{name}` — the one behavior endpoint
+
+Request: `{"args": { ... }}` — the widget's payload (form values, button args, or
+a data-source's args). Response: **`{"result": <json>}`**. That's it — an action
+returns a single result; it does **not** push to the UI. (Unknown `{name}` →
+`404`; the proxy passes your status + body through verbatim.)
+
+This one endpoint backs both primitives:
+
+- **`action` (do)** — a button click or form submit calls the named action for
+  its side effect. The `result` is available to the calling widget (e.g. a
+  form's success state); nothing else happens automatically.
+- **`data_source` (display)** — a display widget (table, form prefill, …) calls
+  the named action to *fetch* what it shows. `args` come from the widget's
+  `data_source.args`. Return the data as the `result`.
+
+### How widgets update — pull, never push
+
+There is **no server push to widgets** and nothing widget-related on the chat
+stream. When an action changes data another widget shows, that widget simply
+**re-pulls its `data_source`**. The YAML wires this declaratively with a
+`refresh` list naming the widgets to re-pull after an action succeeds:
+
+```yaml
+widgets:
+  - { type: table, name: findings, data_source: { action: list_findings } }
+  - type: button-group
+    name: ops
+    buttons:
+      - { label: "Re-run scan", action: run_scan, refresh: [findings] }
+  - type: form
+    name: add
+    fields: [ ... ]
+    submit_action: add_finding
+    refresh: [findings]          # re-pull `findings` after a successful submit
+```
+
+Your backend stays **UI-agnostic** — it only implements actions
+(`run_scan`, `add_finding`, `list_findings`) and never references widget names.
+`refresh` (the one place widget names appear) lives in the YAML, which is the
+sole wiring layer. The proxy turns `refresh` into re-pulls of those widgets'
+`data_source` actions — i.e. more calls to this same endpoint.
+
+> Tool calls shown in a `tool-calls` widget are **not** actions — they're part of
+> the chat turn's event stream (§5), pushed by the platform during a run. Actions
+> and data sources are the only dev-configured widget behaviors.
 
 ---
 
@@ -175,6 +232,7 @@ package; developers never see or depend on it.
 - [ ] Each stream frame is `data: {"framework": "...", "event": <native event>}`.
 - [ ] `framework` is one of the supported values (or `native`).
 - [ ] `POST /agents/{id}/cancel` with `{run_id}` stops the run and returns `{cancelled: bool}`.
+- [ ] `POST /agents/{id}/actions/{name}` accepts `{args}` and returns `{result}` (only if the agent's `ui.yaml` uses `action` / `data_source`).
 - [ ] Credentials from `context.credentials` are used per-run and never persisted.
 
 The reference [`agent-server/`](agent-server/) passes all of the above for every
