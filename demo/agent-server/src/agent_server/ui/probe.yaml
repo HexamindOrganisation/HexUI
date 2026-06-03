@@ -8,16 +8,9 @@ widgets:
   - name: transcript
     type: ai-response
     position: { horizontal: left, vertical: high }
-    size: { width: 8, height: 520 }
+    size: { width: 12, height: 520 }
     empty_text: "Ask Probe to research something."
     thinking_indicator: dots
-
-  - name: tool-calls
-    type: tool-calls
-    position: { horizontal: right, vertical: high }
-    size: { width: 4, height: 520 }
-    title: Sources
-    empty_text: "Retrieved sources appear here."
 
   - name: chat-input
     type: ai-chat-input

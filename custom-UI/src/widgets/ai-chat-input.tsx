@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetProps } from "../registry/types.js";
 import type { AiChatInputWidget } from "../schema/widgets/ai-chat-input.js";
 import type { AgentFile } from "../runtime/agentBridge.js";
@@ -6,6 +6,21 @@ import { useAgentUIContext } from "../runtime/context.js";
 
 const CANCEL_ACTION = "cancel-run";
 const ACCENT = "var(--accent-color, hsl(var(--primary)))";
+
+// File-presentation helpers (mirror the design handoff fx). The agent stays the
+// only color, so the glyph is a neutral tile and only the icon distinguishes
+// doc / spreadsheet / code.
+const SHEET = ["csv", "tsv", "xlsx", "xls"];
+const CODE = ["yaml", "yml", "json", "ts", "tsx", "js", "py", "sh", "go", "rb", "sql"];
+const extOf = (name: string) =>
+  (name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "").toLowerCase();
+const tagOf = (name: string) => (extOf(name) || "file").toUpperCase();
+function fmtSize(b: number): string {
+  if (b == null) return "—";
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${Math.round(b / 1024)} KB`;
+  return `${(b / 1048576).toFixed(1)} MB`;
+}
 
 /**
  * The constant HexaUI composer: one quiet field on a surface card — attach on
@@ -24,9 +39,16 @@ export function AiChatInputWidgetComponent({
   const fileSvc = agent?.files;
   const [attached, setAttached] = useState<AgentFile[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuQuery, setMenuQuery] = useState("");
   const [library, setLibrary] = useState<AgentFile[] | null>(null);
   const attachRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredLibrary = useMemo(() => {
+    const ql = menuQuery.trim().toLowerCase();
+    const list = library ?? [];
+    return ql ? list.filter((f) => f.name.toLowerCase().includes(ql)) : list;
+  }, [library, menuQuery]);
 
   const canFallback = !agent && (dispatcher.has?.("user-submit") ?? false);
   const inert = !agent && !canFallback;
@@ -127,24 +149,23 @@ export function AiChatInputWidgetComponent({
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-[var(--r-lg,16px)] border border-border bg-card px-4 pb-3 pt-3 transition-colors focus-within:[border-color:var(--accent-color,hsl(var(--primary)))]"
+      className="hxf rounded-[var(--r-lg,16px)] border border-border bg-card px-4 pb-3 pt-3 transition-colors focus-within:[border-color:var(--accent-color,hsl(var(--primary)))]"
       style={{ boxShadow: "var(--hx-shadow)" }}
     >
       {attached.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        <div className="attach-pills">
           {attached.map((f) => (
-            <span
-              key={f.id}
-              className="flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 py-1 pl-2 pr-1 text-xs"
-              title={`${f.name} (${f.mime})`}
-            >
-              <FileIcon />
-              <span className="max-w-[160px] truncate">{f.name}</span>
+            <span key={f.id} className="apill" title={`${f.name} (${f.mime})`}>
+              <span className="fglyph ap-glyph">
+                <GlyphIcon name={f.name} size={13} />
+              </span>
+              <span className="ap-name">{f.name}</span>
+              <span className="ap-size">{fmtSize(f.size)}</span>
               <button
                 type="button"
+                className="ap-x"
                 onClick={() => removeAttached(f.id)}
                 aria-label={`Remove ${f.name}`}
-                className="rounded p-0.5 text-muted-foreground hover:bg-card hover:text-foreground"
               >
                 <XIcon />
               </button>
@@ -178,38 +199,60 @@ export function AiChatInputWidgetComponent({
               <PaperclipIcon />
             </IconButton>
             {menuOpen && (
-              <div className="hx-pop absolute bottom-full left-0 z-50 mb-2 w-60 overflow-hidden rounded-lg border border-border bg-popover py-1 text-sm shadow-xl">
+              <div className="attach-menu bottom-full left-0 mb-2">
+                <div className="am-search">
+                  <SearchIcon />
+                  <input
+                    value={menuQuery}
+                    onChange={(e) => setMenuQuery(e.target.value)}
+                    placeholder="Search files to attach"
+                    autoFocus
+                  />
+                </div>
                 <button
                   type="button"
+                  className="am-upload"
                   onClick={() => inputRef.current?.click()}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-secondary"
                 >
-                  <UploadIcon /> Upload file…
+                  <span className="au-ic">
+                    <UploadIcon />
+                  </span>
+                  <div>
+                    <div className="au-t">Upload new file</div>
+                    <div className="au-s">PDF, CSV, code &amp; text</div>
+                  </div>
                 </button>
-                <div className="my-1 border-t border-border/60" />
-                <div className="px-3 pb-1 font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
-                  From library
-                </div>
-                <div className="max-h-56 overflow-auto">
+                <div className="am-seclbl">From your files</div>
+                <div className="am-list">
                   {library === null ? (
-                    <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
-                  ) : library.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-muted-foreground">No files yet.</div>
+                    <div className="am-empty">Loading…</div>
+                  ) : filteredLibrary.length === 0 ? (
+                    <div className="am-empty">
+                      {menuQuery ? `No files match “${menuQuery}”.` : "No files yet."}
+                    </div>
                   ) : (
-                    library.map((f) => {
+                    filteredLibrary.map((f) => {
                       const on = attachedIds.has(f.id);
                       return (
                         <button
                           key={f.id}
                           type="button"
-                          disabled={on}
+                          className={"am-row" + (on ? " attached" : "")}
                           onClick={() => pickFromLibrary(f.id)}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-secondary disabled:opacity-50"
                         >
-                          <FileIcon />
-                          <span className="flex-1 truncate text-[13px]">{f.name}</span>
+                          <span className="fglyph ar-glyph">
+                            <GlyphIcon name={f.name} size={16} />
+                          </span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div className="ar-name">{f.name}</div>
+                            <div className="ar-meta">
+                              {tagOf(f.name)} · {fmtSize(f.size)}
+                            </div>
+                          </div>
                           {on && (
-                            <span className="text-[11px] text-muted-foreground">attached</span>
+                            <span className="ar-check">
+                              <CheckIcon />
+                            </span>
                           )}
                         </button>
                       );
@@ -310,11 +353,57 @@ function UploadIcon(): JSX.Element {
   );
 }
 
-function FileIcon(): JSX.Element {
+/** Neutral file glyph; the icon distinguishes doc / spreadsheet / code. */
+function GlyphIcon({ name, size = 16 }: { name: string; size?: number }): JSX.Element {
+  const e = extOf(name);
+  const cat = e === "pdf" ? "pdf" : SHEET.includes(e) ? "sheet" : CODE.includes(e) ? "code" : "text";
+  const common = {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.5,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+    style: { width: size, height: size },
+  };
+  if (cat === "code") {
+    return (
+      <svg {...common}>
+        <path d="M16 18l6-6-6-6" />
+        <path d="M8 6l-6 6 6 6" />
+      </svg>
+    );
+  }
+  if (cat === "sheet") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+      </svg>
+    );
+  }
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-3.5 w-3.5 shrink-0 text-muted-foreground">
+    <svg {...common}>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+
+function SearchIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-[15px] w-[15px]">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </svg>
+  );
+}
+
+function CheckIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-[17px] w-[17px]">
+      <path d="M20 6L9 17l-5-5" />
     </svg>
   );
 }

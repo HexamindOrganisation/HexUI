@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useRef, useState } from "react";
-import { ArrowUp, FileText, Paperclip, Upload, X } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, Check, Paperclip, Search, Upload, X } from "lucide-react";
 
 import type { AgentSummary } from "../api/agents";
 import { listFiles, uploadFile, type FileMeta } from "../api/files";
+import { FileGlyph, fmtSize, relTime, tagOf } from "../lib/fileFx";
 
 const ACCENT = "var(--accent-color, hsl(var(--primary)))";
 
@@ -34,10 +35,17 @@ export function Greeting({
   const [text, setText] = useState("");
   const [pending, setPending] = useState<FileMeta[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuQuery, setMenuQuery] = useState("");
   const [library, setLibrary] = useState<FileMeta[] | null>(null);
   const attachRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasText = text.trim().length > 0;
+
+  const filteredLibrary = useMemo(() => {
+    const ql = menuQuery.trim().toLowerCase();
+    const list = library ?? [];
+    return ql ? list.filter((f) => f.name.toLowerCase().includes(ql)) : list;
+  }, [library, menuQuery]);
 
   const words = `${greetWord()}, dev01`.split(" ");
 
@@ -121,7 +129,7 @@ export function Greeting({
         </div>
 
         <form
-          className="mt-7 rounded-[var(--r-lg,16px)] border border-border bg-card px-4 pb-3 pt-3.5 transition-colors focus-within:[border-color:var(--accent-color,hsl(var(--primary)))]"
+          className="hxf mt-7 rounded-[var(--r-lg,16px)] border border-border bg-card px-4 pb-3 pt-3.5 transition-colors focus-within:[border-color:var(--accent-color,hsl(var(--primary)))]"
           style={{ boxShadow: "var(--hx-shadow)" }}
           onSubmit={(e) => {
             e.preventDefault();
@@ -129,22 +137,19 @@ export function Greeting({
           }}
         >
           {pending.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
+            <div className="attach-pills">
               {pending.map((f) => (
-                <span
-                  key={f.id}
-                  className="flex items-center gap-1.5 rounded-md border border-border bg-secondary/60 py-1 pl-2 pr-1 text-xs"
-                  title={f.name}
-                >
-                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="max-w-[160px] truncate">{f.name}</span>
+                <span key={f.id} className="apill" title={f.name}>
+                  <FileGlyph name={f.name} size={22} className="fglyph ap-glyph" />
+                  <span className="ap-name">{f.name}</span>
+                  <span className="ap-size">{fmtSize(f.size)}</span>
                   <button
                     type="button"
+                    className="ap-x"
                     onClick={() => setPending((p) => p.filter((x) => x.id !== f.id))}
                     aria-label={`Remove ${f.name}`}
-                    className="rounded p-0.5 text-muted-foreground hover:bg-card hover:text-foreground"
                   >
-                    <X className="h-3 w-3" />
+                    <X style={{ width: 14, height: 14 }} />
                   </button>
                 </span>
               ))}
@@ -177,40 +182,62 @@ export function Greeting({
                 <Paperclip className="h-[18px] w-[18px]" />
               </button>
               {menuOpen && (
-                <div className="hx-pop absolute bottom-full left-0 z-50 mb-2 w-60 overflow-hidden rounded-lg border border-border bg-popover py-1 text-sm shadow-xl">
+                <div className="attach-menu bottom-full left-0 mb-2">
+                  <div className="am-search">
+                    <Search style={{ width: 15, height: 15 }} />
+                    <input
+                      value={menuQuery}
+                      onChange={(e) => setMenuQuery(e.target.value)}
+                      placeholder="Search files to attach"
+                      autoFocus
+                    />
+                  </div>
                   <button
                     type="button"
+                    className="am-upload"
                     onClick={() => inputRef.current?.click()}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-secondary"
                   >
-                    <Upload className="h-4 w-4" /> Upload file…
+                    <span className="au-ic">
+                      <Upload style={{ width: 17, height: 17 }} />
+                    </span>
+                    <div>
+                      <div className="au-t">Upload new file</div>
+                      <div className="au-s">PDF, CSV, code &amp; text</div>
+                    </div>
                   </button>
-                  <div className="my-1 border-t border-border/60" />
-                  <div className="px-3 pb-1 font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
-                    From library
-                  </div>
-                  <div className="max-h-56 overflow-auto">
+                  <div className="am-seclbl">From your files</div>
+                  <div className="am-list">
                     {library === null ? (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
-                    ) : library.length === 0 ? (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">No files yet.</div>
+                      <div className="am-empty">Loading…</div>
+                    ) : filteredLibrary.length === 0 ? (
+                      <div className="am-empty">
+                        {menuQuery ? `No files match “${menuQuery}”.` : "No files yet."}
+                      </div>
                     ) : (
-                      library.map((f) => {
+                      filteredLibrary.map((f) => {
                         const on = pendingIds.has(f.id);
                         return (
                           <button
                             key={f.id}
                             type="button"
-                            disabled={on}
+                            className={"am-row" + (on ? " attached" : "")}
                             onClick={() => {
                               addPending(f);
                               setMenuOpen(false);
                             }}
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-secondary disabled:opacity-50"
                           >
-                            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            <span className="flex-1 truncate text-[13px]">{f.name}</span>
-                            {on && <span className="text-[11px] text-muted-foreground">added</span>}
+                            <FileGlyph name={f.name} size={30} className="fglyph ar-glyph" />
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div className="ar-name">{f.name}</div>
+                              <div className="ar-meta">
+                                {tagOf(f.name)} · {fmtSize(f.size)} · {relTime(f.created_at)}
+                              </div>
+                            </div>
+                            {on && (
+                              <span className="ar-check">
+                                <Check style={{ width: 17, height: 17 }} />
+                              </span>
+                            )}
                           </button>
                         );
                       })

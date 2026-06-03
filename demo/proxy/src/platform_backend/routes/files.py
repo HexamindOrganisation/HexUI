@@ -17,7 +17,7 @@ from ..auth.implicit_user import current_user
 from ..db import get_session
 from ..models.file import File as FileModel
 from ..models.user import User
-from ..schemas.file import FileOut
+from ..schemas.file import FileOut, FileRenameIn
 
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -87,6 +87,20 @@ async def get_file(
         media_type=f.mime,
         headers={"Content-Disposition": f'inline; filename="{f.name}"'},
     )
+
+
+@router.patch("/{file_id}", response_model=FileOut)
+async def rename_file(
+    file_id: uuid.UUID,
+    body: FileRenameIn,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_session),
+) -> FileOut:
+    f = await _get_owned(session, user.id, file_id)
+    f.name = body.name.strip() or f.name
+    await session.commit()
+    await session.refresh(f)
+    return FileOut.model_validate(f)
 
 
 @router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)

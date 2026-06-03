@@ -1,4 +1,4 @@
-import { del, getJson, postJson } from "./client";
+import { del, getJson, patchJson, postJson } from "./client";
 
 /** A file in the user's global library. */
 export interface FileMeta {
@@ -23,6 +23,10 @@ export async function uploadFile(file: File): Promise<FileMeta> {
   const resp = await fetch("/api/files", { method: "POST", body: form });
   if (!resp.ok) throw new Error(`Upload failed: HTTP ${resp.status}`);
   return (await resp.json()) as FileMeta;
+}
+
+export function renameFile(id: string, name: string): Promise<FileMeta> {
+  return patchJson<FileMeta>(`/api/files/${id}`, { name });
 }
 
 export function deleteFile(id: string): Promise<void> {
