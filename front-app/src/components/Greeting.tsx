@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Check, Paperclip, Search, Upload, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowUp, Check, KeyRound, Paperclip, Search, Upload, X } from "lucide-react";
+import { AttachPalette } from "agent-ui";
 
 import type { AgentSummary } from "../api/agents";
 import { listFiles, uploadFile, type FileMeta } from "../api/files";
@@ -25,16 +27,20 @@ function greetWord(): string {
 export function Greeting({
   agent,
   sessionKey,
+  requiresKey = false,
   onSend,
 }: {
   agent: AgentSummary;
   /** Changes per new session so the entrance animation replays. */
   sessionKey: string;
+  /** No API key set yet → gate the first message behind an onboarding prompt. */
+  requiresKey?: boolean;
   onSend: (text: string, fileIds: string[]) => void;
 }) {
   const [text, setText] = useState("");
   const [pending, setPending] = useState<FileMeta[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState("");
   const [library, setLibrary] = useState<FileMeta[] | null>(null);
   const attachRef = useRef<HTMLDivElement>(null);
@@ -59,7 +65,22 @@ export function Greeting({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
 
+  // ⌘K / Ctrl+K opens the command-palette attach (keyboard-first variant).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setMenuOpen(false);
+        setPaletteOpen(true);
+        if (library === null) listFiles().then(setLibrary).catch(() => setLibrary([]));
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [library]);
+
   const submit = () => {
+    if (requiresKey) return; // gated — the onboarding prompt is shown instead
     const t = text.trim();
     if (t) onSend(t, pending.map((p) => p.id));
   };
@@ -77,6 +98,13 @@ export function Greeting({
 
   const addPending = (f: FileMeta) =>
     setPending((prev) => (prev.some((p) => p.id === f.id) ? prev : [...prev, f]));
+
+  const togglePending = (f: FileMeta) =>
+    setPending((prev) =>
+      prev.some((p) => p.id === f.id)
+        ? prev.filter((p) => p.id !== f.id)
+        : [...prev, f],
+    );
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []);
@@ -127,6 +155,36 @@ export function Greeting({
             {agent.role}
           </span>
         </div>
+
+        {requiresKey && (
+          <div className="mt-6 flex items-start gap-3 rounded-[var(--r-md,11px)] border border-border bg-card px-4 py-3.5">
+            <span
+              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+              style={{
+                background: "color-mix(in srgb, var(--accent-color, hsl(var(--primary))) 16%, transparent)",
+                color: "var(--accent-color, hsl(var(--primary)))",
+              }}
+            >
+              <KeyRound className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13.5px] font-medium text-foreground">
+                Add an API key to start chatting
+              </div>
+              <div className="mt-0.5 text-[12.5px] text-muted-foreground">
+                {agent.name} needs your provider key to answer. It's stored encrypted
+                and never leaves the server.
+              </div>
+            </div>
+            <Link
+              to="/settings"
+              className="shrink-0 self-center rounded-md px-3 py-1.5 text-[13px] font-medium"
+              style={{ background: ACCENT, color: "hsl(var(--background))" }}
+            >
+              Add key
+            </Link>
+          </div>
+        )}
 
         <form
           className="hxf mt-7 rounded-[var(--r-lg,16px)] border border-border bg-card px-4 pb-3 pt-3.5 transition-colors focus-within:[border-color:var(--accent-color,hsl(var(--primary)))]"
@@ -249,11 +307,11 @@ export function Greeting({
             <div className="flex-1" />
             <button
               type="submit"
-              disabled={!hasText}
+              disabled={!hasText || requiresKey}
               aria-label="Send"
               className="flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed"
               style={
-                hasText
+                hasText && !requiresKey
                   ? { background: ACCENT, color: "hsl(var(--background))" }
                   : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
               }
@@ -263,6 +321,27 @@ export function Greeting({
           </div>
         </form>
       </div>
+
+      {paletteOpen && (
+        <AttachPalette
+          files={(library ?? []).map((f) => ({
+            id: f.id,
+            name: f.name,
+            size: f.size,
+            created_at: f.created_at,
+          }))}
+          attachedIds={pendingIds}
+          onAttach={(f) => {
+            const meta = (library ?? []).find((x) => x.id === f.id);
+            if (meta) togglePending(meta);
+          }}
+          onUpload={() => {
+            setPaletteOpen(false);
+            inputRef.current?.click();
+          }}
+          onClose={() => setPaletteOpen(false)}
+        />
+      )}
     </div>
   );
 }

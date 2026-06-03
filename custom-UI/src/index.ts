@@ -1,6 +1,9 @@
 // Primary mount
 export { AgentUI, type AgentUIProps } from "./components/AgentUI.js";
 
+// Command-palette attach (composer "variation B") — reusable by host shells.
+export { AttachPalette, type PaletteFile } from "./lib/attach-palette.js";
+
 // Runtime contracts
 export type { ActionDispatcher } from "./runtime/dispatcher.js";
 export { nullDispatcher } from "./runtime/dispatcher.js";

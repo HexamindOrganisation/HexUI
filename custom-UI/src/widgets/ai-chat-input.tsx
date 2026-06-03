@@ -3,24 +3,19 @@ import type { WidgetProps } from "../registry/types.js";
 import type { AiChatInputWidget } from "../schema/widgets/ai-chat-input.js";
 import type { AgentFile } from "../runtime/agentBridge.js";
 import { useAgentUIContext } from "../runtime/context.js";
+import { AttachPalette } from "../lib/attach-palette.js";
+import {
+  CheckIcon,
+  fmtSize,
+  GlyphIcon,
+  SearchIcon,
+  tagOf,
+  UploadIcon,
+  XIcon,
+} from "../lib/file-bits.js";
 
 const CANCEL_ACTION = "cancel-run";
 const ACCENT = "var(--accent-color, hsl(var(--primary)))";
-
-// File-presentation helpers (mirror the design handoff fx). The agent stays the
-// only color, so the glyph is a neutral tile and only the icon distinguishes
-// doc / spreadsheet / code.
-const SHEET = ["csv", "tsv", "xlsx", "xls"];
-const CODE = ["yaml", "yml", "json", "ts", "tsx", "js", "py", "sh", "go", "rb", "sql"];
-const extOf = (name: string) =>
-  (name.includes(".") ? name.slice(name.lastIndexOf(".") + 1) : "").toLowerCase();
-const tagOf = (name: string) => (extOf(name) || "file").toUpperCase();
-function fmtSize(b: number): string {
-  if (b == null) return "—";
-  if (b < 1024) return `${b} B`;
-  if (b < 1048576) return `${Math.round(b / 1024)} KB`;
-  return `${(b / 1048576).toFixed(1)} MB`;
-}
 
 /**
  * The constant HexaUI composer: one quiet field on a surface card — attach on
@@ -39,6 +34,7 @@ export function AiChatInputWidgetComponent({
   const fileSvc = agent?.files;
   const [attached, setAttached] = useState<AgentFile[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState("");
   const [library, setLibrary] = useState<AgentFile[] | null>(null);
   const attachRef = useRef<HTMLDivElement>(null);
@@ -67,6 +63,24 @@ export function AiChatInputWidgetComponent({
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
+
+  // ⌘K / Ctrl+K opens the command-palette attach (the keyboard-first variant of
+  // the paperclip popover).
+  useEffect(() => {
+    if (!fileSvc) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setMenuOpen(false);
+        setPaletteOpen(true);
+        fileSvc.listAttached().then(setAttached).catch(() => undefined);
+        if (library === null)
+          fileSvc.listLibrary().then(setLibrary).catch(() => setLibrary([]));
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [fileSvc, library]);
 
   const attachedIds = new Set(attached.map((a) => a.id));
 
@@ -143,6 +157,20 @@ export function AiChatInputWidgetComponent({
       setAttached((prev) => prev.filter((a) => a.id !== id));
     } catch {
       /* ignore */
+    }
+  };
+
+  // Palette toggles attachment (attach if absent, detach if present).
+  const toggleAttach = async (id: string) => {
+    if (!fileSvc) return;
+    if (attachedIds.has(id)) {
+      await removeAttached(id);
+    } else {
+      try {
+        setAttached(await fileSvc.attach([id]));
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -292,6 +320,19 @@ export function AiChatInputWidgetComponent({
           </button>
         )}
       </div>
+
+      {paletteOpen && fileSvc && (
+        <AttachPalette
+          files={(library ?? []).map((f) => ({ id: f.id, name: f.name, size: f.size }))}
+          attachedIds={attachedIds}
+          onAttach={(f) => toggleAttach(f.id)}
+          onUpload={() => {
+            setPaletteOpen(false);
+            inputRef.current?.click();
+          }}
+          onClose={() => setPaletteOpen(false)}
+        />
+      )}
     </form>
   );
 }
@@ -343,75 +384,3 @@ function PaperclipIcon(): JSX.Element {
   );
 }
 
-function UploadIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-4 w-4">
-      <path d="M12 16V4" />
-      <path d="M7 9l5-5 5 5" />
-      <path d="M5 20h14" />
-    </svg>
-  );
-}
-
-/** Neutral file glyph; the icon distinguishes doc / spreadsheet / code. */
-function GlyphIcon({ name, size = 16 }: { name: string; size?: number }): JSX.Element {
-  const e = extOf(name);
-  const cat = e === "pdf" ? "pdf" : SHEET.includes(e) ? "sheet" : CODE.includes(e) ? "code" : "text";
-  const common = {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.5,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-    style: { width: size, height: size },
-  };
-  if (cat === "code") {
-    return (
-      <svg {...common}>
-        <path d="M16 18l6-6-6-6" />
-        <path d="M8 6l-6 6 6 6" />
-      </svg>
-    );
-  }
-  if (cat === "sheet") {
-    return (
-      <svg {...common}>
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-    </svg>
-  );
-}
-
-function SearchIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-[15px] w-[15px]">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M21 21l-4.3-4.3" />
-    </svg>
-  );
-}
-
-function CheckIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-[17px] w-[17px]">
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  );
-}
-
-function XIcon(): JSX.Element {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden className="h-3 w-3">
-      <path d="M4 4l8 8M12 4l-8 8" />
-    </svg>
-  );
-}
