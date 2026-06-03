@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WidgetProps } from "../registry/types.js";
 import type { AiChatInputWidget } from "../schema/widgets/ai-chat-input.js";
 import type { AgentFile } from "../runtime/agentBridge.js";
@@ -16,6 +16,13 @@ import {
 
 const CANCEL_ACTION = "cancel-run";
 const ACCENT = "var(--accent-color, hsl(var(--primary)))";
+
+// Platform-aware shortcut label for the command-palette attach hint.
+const SHORTCUT_LABEL =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "")
+    ? "⌘K"
+    : "Ctrl K";
 
 /**
  * The constant HexaUI composer: one quiet field on a surface card — attach on
@@ -64,23 +71,27 @@ export function AiChatInputWidgetComponent({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
 
-  // ⌘K / Ctrl+K opens the command-palette attach (the keyboard-first variant of
-  // the paperclip popover).
-  useEffect(() => {
+  // Open the command-palette attach (keyboard-first variant of the popover).
+  const openPalette = useCallback(() => {
     if (!fileSvc) return;
+    setMenuOpen(false);
+    setPaletteOpen(true);
+    fileSvc.listAttached().then(setAttached).catch(() => undefined);
+    if (library === null)
+      fileSvc.listLibrary().then(setLibrary).catch(() => setLibrary([]));
+  }, [fileSvc, library]);
+
+  // ⌘K / Ctrl+K opens it from anywhere in the chat.
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setMenuOpen(false);
-        setPaletteOpen(true);
-        fileSvc.listAttached().then(setAttached).catch(() => undefined);
-        if (library === null)
-          fileSvc.listLibrary().then(setLibrary).catch(() => setLibrary([]));
+        openPalette();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [fileSvc, library]);
+  }, [openPalette]);
 
   const attachedIds = new Set(attached.map((a) => a.id));
 
@@ -290,6 +301,19 @@ export function AiChatInputWidgetComponent({
               </div>
             )}
           </div>
+        )}
+
+        {fileSvc && (
+          <button
+            type="button"
+            onClick={openPalette}
+            title="Search & attach a file"
+            aria-label="Open the attach command palette"
+            className="hidden h-7 items-center rounded-md border border-border px-1.5 font-mono text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+            style={{ fontSize: 10.5, letterSpacing: "0.04em" }}
+          >
+            {SHORTCUT_LABEL}
+          </button>
         )}
 
         <div className="flex-1" />

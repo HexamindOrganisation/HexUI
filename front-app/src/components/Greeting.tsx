@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUp, Check, KeyRound, Paperclip, Search, Upload, X } from "lucide-react";
 import { AttachPalette } from "agent-ui";
@@ -8,6 +8,13 @@ import { listFiles, uploadFile, type FileMeta } from "../api/files";
 import { FileGlyph, fmtSize, relTime, tagOf } from "../lib/fileFx";
 
 const ACCENT = "var(--accent-color, hsl(var(--primary)))";
+
+// Platform-aware shortcut label for the command-palette attach hint.
+const SHORTCUT_LABEL =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "")
+    ? "⌘K"
+    : "Ctrl K";
 
 function greetWord(): string {
   const h = new Date().getHours();
@@ -65,19 +72,24 @@ export function Greeting({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
 
-  // ⌘K / Ctrl+K opens the command-palette attach (keyboard-first variant).
+  // Open the command-palette attach (keyboard-first variant of the popover).
+  const openPalette = useCallback(() => {
+    setMenuOpen(false);
+    setPaletteOpen(true);
+    if (library === null) listFiles().then(setLibrary).catch(() => setLibrary([]));
+  }, [library]);
+
+  // ⌘K / Ctrl+K opens it from anywhere on the greeting.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setMenuOpen(false);
-        setPaletteOpen(true);
-        if (library === null) listFiles().then(setLibrary).catch(() => setLibrary([]));
+        openPalette();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [library]);
+  }, [openPalette]);
 
   const submit = () => {
     if (requiresKey) return; // gated — the onboarding prompt is shown instead
@@ -304,6 +316,16 @@ export function Greeting({
                 </div>
               )}
             </div>
+            <button
+              type="button"
+              onClick={openPalette}
+              title="Search & attach a file"
+              aria-label="Open the attach command palette"
+              className="hidden h-7 items-center rounded-md border border-border px-1.5 font-mono text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:flex"
+              style={{ fontSize: 10.5, letterSpacing: "0.04em" }}
+            >
+              {SHORTCUT_LABEL}
+            </button>
             <div className="flex-1" />
             <button
               type="submit"
