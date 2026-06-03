@@ -59,6 +59,9 @@ export function AiChatInputWidgetComponent({
       if (agent) await agent.onUserSubmit(t);
       else if (canFallback) await dispatcher.invoke("user-submit", { text: t });
       setText("");
+      // The conversation may have just been created (first turn from the
+      // greeting, with files attached) — refresh the tray so they show.
+      if (fileSvc) fileSvc.listAttached().then(setAttached).catch(() => undefined);
     } finally {
       setSubmitting(false);
     }
@@ -76,6 +79,8 @@ export function AiChatInputWidgetComponent({
   const openMenu = async () => {
     if (!fileSvc) return;
     setMenuOpen((o) => !o);
+    // Refresh the tray (the conversation may now exist with linked files).
+    fileSvc.listAttached().then(setAttached).catch(() => undefined);
     if (library === null) {
       try {
         setLibrary(await fileSvc.listLibrary());

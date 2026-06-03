@@ -1,6 +1,7 @@
 """Backend file-handling check: upload → attach to a conversation (persistent)
-→ confirm the agent receives it via context.files across turns. In-process
-(SQLite + ASGITransport to the agent-server), like e2e_check.py."""
+→ confirm the agent receives the file CONTENT via context.files across turns,
+for both a text/plain and an application/octet-stream upload (the proxy decodes
+any valid UTF-8 regardless of mime). In-process (SQLite + ASGITransport)."""
 
 import os
 import tempfile
@@ -46,34 +47,44 @@ def check(name, cond, extra=""):
         fail.append(name)
 
 
-# upload a text file (multipart)
-r = c.post("/files", files={"file": ("notes.txt", b"the secret code is BANANA-42", "text/plain")})
-check("POST /files -> 201 + id", r.status_code == 201 and r.json().get("id"), r.text[:200])
-fid = r.json()["id"]
-check("GET /files lists it", any(f["id"] == fid for f in c.get("/files").json()))
+def send(cid, content):
+    """Send a turn, then return the persisted assistant reply (NOT the raw
+    stream — that includes run_start.input = history, which would carry prior
+    turns' echoed file content and mask detach)."""
+    with c.stream("POST", f"/conversations/{cid}/messages", json={"content": content}) as r:
+        for _ in r.iter_bytes():
+            pass
+    msgs = c.get(f"/conversations/{cid}/messages").json()
+    replies = [m["content"] for m in msgs if m["role"] == "assistant"]
+    return replies[-1] if replies else ""
 
-# conversation + attach
+
+# Upload two files: a normal text/plain, and one mislabeled octet-stream.
+txt = c.post("/files", files={"file": ("identity.txt", b"name: Quentin; secret BANANA-42", "text/plain")}).json()
+binlabeled = c.post(
+    "/files",
+    files={"file": ("report.log", b"bug ZEBRA-99 on startup", "application/octet-stream")},
+).json()
+check("two uploads created", bool(txt.get("id") and binlabeled.get("id")))
+
 cid = c.post("/conversations", json={"agent_id": "probe"}).json()["id"]
-c.post(f"/conversations/{cid}/files", json={"file_ids": [fid]})
-attached = c.get(f"/conversations/{cid}/files").json()
-check("attach persists on conversation", any(f["id"] == fid for f in attached), str(attached)[:200])
+c.post(f"/conversations/{cid}/files", json={"file_ids": [txt["id"], binlabeled["id"]]})
 
-# turn 1: send WITHOUT file_ids — file should still be forwarded (persistent)
-with c.stream("POST", f"/conversations/{cid}/messages", json={"content": "hi"}) as resp:
-    t1 = b"".join(resp.iter_bytes()).decode()
-check("turn-1 agent received the file (persisted, no file_ids sent)", "notes.txt" in t1, t1[-300:])
+t1 = send(cid, "what do you know about me?")
+check("text/plain CONTENT reached agent (BANANA-42)", "BANANA-42" in t1, t1[-400:])
+check("octet-stream CONTENT decoded + reached agent (ZEBRA-99)", "ZEBRA-99" in t1, t1[-400:])
 
-# turn 2: still there
-with c.stream("POST", f"/conversations/{cid}/messages", json={"content": "again"}) as resp:
-    t2 = b"".join(resp.iter_bytes()).decode()
-check("turn-2 file still forwarded", "notes.txt" in t2, t2[-200:])
+# Persists across turns without re-sending file_ids.
+t2 = send(cid, "again?")
+check("content still forwarded on turn 2", "BANANA-42" in t2 and "ZEBRA-99" in t2, t2[-300:])
 
-# detach → gone
-c.delete(f"/conversations/{cid}/files/{fid}")
-check("detach removes it", not any(f["id"] == fid for f in c.get(f"/conversations/{cid}/files").json()))
+# Detach one → its content stops being forwarded on the next turn.
+c.delete(f"/conversations/{cid}/files/{txt['id']}")
+t3 = send(cid, "and now?")
+check("detached file no longer sent", "BANANA-42" not in t3 and "ZEBRA-99" in t3, t3)
 
 print()
 if fail:
     print("FAILED:", fail)
     raise SystemExit(1)
-print("ALL FILE CHECKS PASSED")
+print("ALL FILE CONTENT CHECKS PASSED")

@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.implicit_user import current_user
@@ -215,7 +215,10 @@ async def detach_conversation_file(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     await _get_owned(session, user.id, conv_id)
-    link = await session.get(ConversationFile, {"conversation_id": conv_id, "file_id": file_id})
-    if link is not None:
-        await session.delete(link)
-        await session.commit()
+    await session.execute(
+        delete(ConversationFile).where(
+            ConversationFile.conversation_id == conv_id,
+            ConversationFile.file_id == file_id,
+        )
+    )
+    await session.commit()

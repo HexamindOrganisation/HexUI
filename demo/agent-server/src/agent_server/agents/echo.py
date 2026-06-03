@@ -33,10 +33,15 @@ class EchoAgent:
         creds = (context or {}).get("credentials") or {}
         present = bool(creds.get("openai_api_key"))
         files = (context or {}).get("files") or []
+
+        # Echo a short content preview so it's visible the bytes actually arrived.
+        def _preview(f: dict) -> str:
+            c = (f.get("content") or "").strip().replace("\n", " ")
+            name = f.get("name", "?")
+            return f'{name}="{c[:60]}"' if c else f"{name}(binary)"
+
         files_note = (
-            " | files: " + ", ".join(f.get("name", "?") for f in files)
-            if files
-            else ""
+            " | files{ " + "; ".join(_preview(f) for f in files) + " }" if files else ""
         )
         reply = f"creds-present:{present}{files_note} | echo: {query}".strip()
 

@@ -52,34 +52,34 @@ from .me_keys import load_credentials_dict
 
 router = APIRouter(prefix="/conversations", tags=["chat"])
 
-# Mimes whose bytes we decode to text and inline into `context.files`. Anything
-# else is forwarded as metadata only (binary handling is post-v1).
-_TEXT_MIMES = {
-    "application/json",
-    "application/xml",
-    "application/javascript",
-    "application/x-yaml",
-    "application/yaml",
-    "application/x-sh",
-    "image/svg+xml",
-}
+def _decode_text(content: bytes, mime: str) -> str | None:
+    """Return decoded text for a file, or None for binary.
+
+    Don't trust the mime alone — browsers often upload text files as
+    `application/octet-stream`. We treat any bytes that decode cleanly as UTF-8
+    as text (covers .txt/.md/.json/.csv/etc. regardless of mime); a declared
+    text/* mime uses lossy decode so it's never dropped.
+    """
+    if mime.startswith("text/"):
+        return content.decode("utf-8", "replace")
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
 
 
 def _files_payload(files: list) -> list[dict]:
     """Shape a conversation's files for `context.files`; decode text content."""
-    out: list[dict] = []
-    for f in files:
-        is_text = f.mime.startswith("text/") or f.mime in _TEXT_MIMES
-        out.append(
-            {
-                "id": str(f.id),
-                "name": f.name,
-                "mime": f.mime,
-                "size": f.size,
-                "content": f.content.decode("utf-8", "replace") if is_text else None,
-            }
-        )
-    return out
+    return [
+        {
+            "id": str(f.id),
+            "name": f.name,
+            "mime": f.mime,
+            "size": f.size,
+            "content": _decode_text(f.content, f.mime),
+        }
+        for f in files
+    ]
 
 
 # Conversation-id → active run_id. In-memory: a process-restart loses the
