@@ -8,9 +8,23 @@ runs. Shows how a real agent consumes a forwarded secret with minimal plumbing.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, AsyncIterator
 
 from .. import protocol
+
+logger = logging.getLogger("agent_server.llm")
+
+
+def _log_prompt(messages: list[dict]) -> None:
+    """Log the full prompt sent to the model — every message, untruncated,
+    including the system block with inlined file contents. Verbose by design:
+    it's the ground truth for "did my file's text actually reach the model?"."""
+    lines = ["LLM prompt (%d message(s)):" % len(messages)]
+    for m in messages:
+        lines.append(f"  ── [{m.get('role')}] ──")
+        lines.append(str(m.get("content", "")))
+    logger.info("\n".join(lines))
 
 
 class LLMAgent:
@@ -49,6 +63,7 @@ class LLMAgent:
                     },
                     *messages,
                 ]
+            _log_prompt(messages)
             stream = await client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,

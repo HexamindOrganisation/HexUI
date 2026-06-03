@@ -44,3 +44,29 @@ PYTHONPATH=demo/agent-server/src:demo/packages/hexa-events/src $PYBIN demo/scrip
 Covers: `POST /agents/{id}/cancel {run_id}` stops the run mid-stream, returns
 `{cancelled: true}`, and the stream still finalizes with `run_end` (so the proxy
 persists partial text).
+
+## `files_check.py` — attachments reach the (echo) agent
+
+Upload → attach to a conversation → confirm `context.files` content reaches the
+agent across turns (text/plain **and** mislabeled `application/octet-stream`,
+which the proxy decodes as UTF-8), and that detaching stops forwarding it.
+In-process; asserts on the **persisted** assistant reply.
+
+```bash
+PYTHONPATH=$PYTHONPATH $PYBIN demo/scripts/files_check.py
+```
+
+## `llm_files_check.py` — attachments reach the **model**
+
+Goes one layer deeper than `files_check.py`: exercises the OpenAI-backed
+`LLMAgent` and captures the exact `messages` array handed to
+`chat.completions.create`, asserting the file content was inlined into the
+model's context. A **fake** `openai` module is injected (no key, no network), so
+this is deterministic and free. Diagnoses the common "the LLM says it can't see
+my file" symptom — each failed check prints the likely cause (LLM not selected /
+key not forwarded / mime dropped / call degraded to the error fallback), and it
+prints the messages the model actually received.
+
+```bash
+PYTHONPATH=$PYTHONPATH $PYBIN demo/scripts/llm_files_check.py
+```

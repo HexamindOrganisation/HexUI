@@ -27,6 +27,7 @@ Notes:
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import AsyncIterator
 
@@ -51,6 +52,8 @@ from .me_keys import load_credentials_dict
 
 
 router = APIRouter(prefix="/conversations", tags=["chat"])
+logger = logging.getLogger("platform_backend.chat")
+
 
 def _decode_text(content: bytes, mime: str) -> str | None:
     """Return decoded text for a file, or None for binary.
@@ -169,6 +172,27 @@ async def post_message(
         await link_files(session, conv.id, user.id, body.file_ids)
         await session.commit()
     files_payload = _files_payload(await conversation_files(session, conv.id))
+    # Ground truth for "the LLM ignores my file": shows what we actually
+    # forward. `content=None` means the bytes weren't valid UTF-8 (PDF / image /
+    # docx / xlsx …) so the agent inlines "[binary file omitted]" and the model
+    # has nothing to read — extract text upstream or send provider file blocks.
+    if files_payload:
+        logger.info(
+            "forwarding %d file(s) to agent %r: %s",
+            len(files_payload),
+            conv.agent_id,
+            [
+                {
+                    "name": f["name"],
+                    "mime": f["mime"],
+                    "size": f["size"],
+                    "content_chars": len(f["content"]) if f["content"] else None,
+                }
+                for f in files_payload
+            ],
+        )
+    else:
+        logger.info("no files attached to conversation %s for this run", conv.id)
 
     run_id = uuid.uuid4().hex
     agent_id = conv.agent_id
