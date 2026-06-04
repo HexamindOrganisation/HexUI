@@ -56,7 +56,7 @@ events; the **proxy translates** and the **UI renders from YAML**. See
 | Path | Purpose |
 |---|---|
 | [custom-UI/](custom-UI/) | The product's heart: a React + TS library that renders a configurable agent UI from YAML (`<AgentUI>` + 11 built-in widgets). Theme bridge, streaming chat, the actions/`data_source` system. |
-| [demo/](demo/) | The runnable reference stack: [`proxy/`](demo/proxy/) (platform backend), [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 4 sample agents), [`packages/hexa-events/`](demo/packages/hexa-events/) (the internal event schema), [`scripts/`](demo/scripts/) (run + smoke checks). |
+| [demo/](demo/) | The runnable reference stack: [`proxy/`](demo/proxy/) (platform backend), [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 4 sample agents), [`starter-agent/`](demo/starter-agent/) (a minimal **copy-me** backend — the whole contract in one file), [`packages/hexa-events/`](demo/packages/hexa-events/) (the internal event schema), [`scripts/`](demo/scripts/) (run + smoke checks, incl. the `verify_backend.py` conformance CLI). |
 | [front-app/](front-app/) | The HexaUI shell that consumes `custom-UI` and talks to the proxy. |
 | [legacy/](legacy/) | The dropped unified-runtime backend (`backend-runtime`), kept for reference. Not part of the live product. |
 | [demo/CONTRACT.md](demo/CONTRACT.md) | The developer contract — the one document an integrator reads. |
@@ -106,6 +106,24 @@ Beyond the chat turn (which the platform owns), widget behavior is just two
 declarative primitives — **`action`** (do something → `POST /actions/{name}`)
 and **`data_source`** (display something, refreshed by re-pull). The backend
 stays UI-agnostic; the YAML is the only wiring layer. See CONTRACT §5b.
+
+### Build your own backend
+
+The fastest path: copy [`demo/starter-agent/`](demo/starter-agent/) — the entire
+contract in one annotated file (one `native` echo agent, the five endpoints,
+one `ui.yaml`) — and change the three spots marked `# CHANGE ME`. Then validate
+it against any running URL:
+
+```bash
+# Acts as the proxy would: assigns a run_id, reads the SSE stream, cancels
+# mid-run, checks every frame's shape against CONTRACT.md §8. Exits non-zero
+# on failure, so it works as a CI gate too.
+python demo/scripts/verify_backend.py http://127.0.0.1:8080
+```
+
+[`demo/agent-server/`](demo/agent-server/) is the richer reference (every
+framework + the actions/`data_source` workspace); the starter is the opposite —
+the fewest moving parts that still pass conformance.
 
 ---
 

@@ -18,6 +18,26 @@ PYBIN=demo/proxy/.venv/bin/python
 PYTHONPATH=demo/proxy/src:demo/agent-server/src:demo/packages/hexa-events/src
 ```
 
+## `verify_backend.py` — conformance checker for *your* backend (live URL)
+
+The integrator-facing tool. Unlike the in-process checks below, this hits a
+**running** backend over a real socket — yours, or the bundled reference — and
+validates the [CONTRACT.md §8](../CONTRACT.md) checklist the way the proxy
+would: it assigns a `run_id`, reads the SSE stream, cancels mid-run, and
+inspects every frame's shape (`{framework, event}`, supported framework, native
+event vocabulary, `{cancelled: bool}`, `{result}`). Prints PASS/FAIL/SKIP per
+item and exits non-zero on any failure, so it works as a CI gate.
+
+Only needs `httpx` (in every demo venv). Start a backend, then:
+
+```bash
+$PYBIN demo/scripts/verify_backend.py http://127.0.0.1:8080            # first roster agent
+$PYBIN demo/scripts/verify_backend.py http://127.0.0.1:8080 --agent orbit
+```
+
+Pairs with [`../starter-agent/`](../starter-agent/), the minimal copy-me backend
+this checker is the acceptance test for.
+
 ## `e2e_check.py` — full contract path, in-process (all frameworks)
 
 Drives the **real** proxy chat route → `runtime_client` → agent-server's

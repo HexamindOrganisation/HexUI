@@ -238,6 +238,19 @@ package; developers never see or depend on it.
 The reference [`agent-server/`](agent-server/) passes all of the above for every
 supported framework; see [`scripts/`](scripts/) for the executable checks.
 
+**Check your own backend.** Run [`scripts/verify_backend.py`](scripts/verify_backend.py)
+against any running backend URL — it acts as the proxy would (assigns a `run_id`,
+reads the SSE stream, cancels mid-run, validates every frame's shape) and prints
+PASS/FAIL per item above, exiting non-zero on failure:
+
+```bash
+python scripts/verify_backend.py http://127.0.0.1:8080 [--agent <id>]
+```
+
+**Start from a template.** [`starter-agent/`](starter-agent/) is the smallest
+conformant backend — the whole contract in one annotated file. Copy it and fill
+in the three `# CHANGE ME` spots.
+
 ---
 
 ## 3. `GET /agents` — roster  ·  ## 4. `GET /agents/{id}/ui` — per-agent UI
