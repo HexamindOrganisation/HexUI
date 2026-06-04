@@ -93,25 +93,44 @@ export function renderMarkdown(src: string): ReactNode {
       continue;
     }
 
-    // Lists (unordered or ordered)
+    // Lists (unordered or ordered). Blank lines between items ("loose" lists,
+    // which LLMs emit constantly) must NOT split the list — otherwise each item
+    // becomes its own <ol> and `list-decimal` restarts at "1." for every one.
     const ulMatch = line.match(/^[-*+]\s+(.*)$/);
-    const olMatch = line.match(/^\d+\.\s+(.*)$/);
+    const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
     if (ulMatch || olMatch) {
       const ordered = !!olMatch;
+      const startNum = olMatch ? parseInt(olMatch[1]!, 10) : 1;
       const items: string[] = [];
       const itemRe = ordered ? /^\d+\.\s+(.*)$/ : /^[-*+]\s+(.*)$/;
       while (i < lines.length) {
         const m = lines[i]!.match(itemRe);
-        if (!m) break;
-        items.push(m[1]!);
-        i++;
+        if (m) {
+          items.push(m[1]!);
+          i++;
+          continue;
+        }
+        // Stay in the list across blank line(s) only if another item follows.
+        if (lines[i]!.trim() === "") {
+          let j = i + 1;
+          while (j < lines.length && lines[j]!.trim() === "") j++;
+          if (j < lines.length && itemRe.test(lines[j]!)) {
+            i = j;
+            continue;
+          }
+        }
+        break;
       }
       const listItems = items.map((it, idx) => (
         <li key={idx}>{renderInline(it)}</li>
       ));
       blocks.push(
         ordered ? (
-          <ol key={key++} className="my-2 list-decimal space-y-1 pl-6">
+          <ol
+            key={key++}
+            start={startNum}
+            className="my-2 list-decimal space-y-1 pl-6"
+          >
             {listItems}
           </ol>
         ) : (
