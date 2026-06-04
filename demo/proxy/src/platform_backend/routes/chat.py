@@ -33,7 +33,7 @@ from typing import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hexa_events import RunEmitter, extract_query, to_sse_frame
@@ -93,6 +93,12 @@ def _files_payload(files: list) -> list[dict]:
 # mapping, which matches the runtime's own model (cancel is process-lifetime,
 # see legacy/backend-runtime/README.md). Durable cancel is post-v0.
 _active_runs: dict[uuid.UUID, str] = {}
+
+# run_ids the user explicitly cancelled. The cancel route adds the id; the chat
+# stream reads it to (a) stop pulling and (b) roll the turn back so a cancelled
+# prompt + partial reply never feed the next run. Disconnect detection alone is
+# unreliable, and an agent that stops on cancel just EOFs like a normal finish.
+_cancelled_runs: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -250,8 +256,8 @@ async def post_message(
             async for frame in iter_frames(
                 runtime_client.stream(agent_id, runtime_body)
             ):
-                # Client gave up? Stop pulling and persist whatever we have.
-                if await request.is_disconnected():
+                # Stop pulling on explicit cancel or a dropped client.
+                if run_id in _cancelled_runs or await request.is_disconnected():
                     break
                 data = frame.data_json
                 if data is None:
@@ -275,13 +281,17 @@ async def post_message(
                 for ev in translator.handle(emitter, event):
                     yield to_sse_frame(ev)
 
-            # run_end, synthesized at EOF/done — skipped only if the client is
-            # already gone (but still built in `finally` for persistence).
-            if not await request.is_disconnected():
+            # run_end, synthesized at EOF/done — skipped on cancel or if the
+            # client is already gone.
+            if run_id not in _cancelled_runs and not await request.is_disconnected():
                 end_events = emitter.run_end()
                 for ev in end_events:
                     yield to_sse_frame(ev)
         finally:
+            # Explicit cancel (the cancel route marked this run) → discard the
+            # turn. A bare disconnect keeps the partial (original behavior).
+            cancelled = run_id in _cancelled_runs
+            _cancelled_runs.discard(run_id)
             if end_events is None:
                 end_events = emitter.run_end()
             final_message = ""
@@ -291,20 +301,28 @@ async def post_message(
                     final_message = result.message
             _active_runs.pop(conv.id, None)
             async with session_factory()() as bg:
-                bg.add(
-                    Message(
-                        conversation_id=conv.id,
-                        role="assistant",
-                        content=final_message,
-                        run_id=run_id,
+                if cancelled:
+                    # Roll the whole turn back: delete the user message persisted
+                    # up-front and skip the partial assistant reply, so a
+                    # cancelled exchange is never fed to the model next turn.
+                    await bg.execute(
+                        delete(Message).where(Message.id == user_message.id)
                     )
-                )
-                # Bump updated_at on the parent conversation so the sidebar
-                # ordering reflects this exchange.
-                fresh_conv = await bg.get(Conversation, conv.id)
-                if fresh_conv is not None:
-                    # SQLAlchemy onupdate fires only on UPDATE; touch a column.
-                    fresh_conv.title = fresh_conv.title  # no-op flush trigger
+                else:
+                    bg.add(
+                        Message(
+                            conversation_id=conv.id,
+                            role="assistant",
+                            content=final_message,
+                            run_id=run_id,
+                        )
+                    )
+                    # Bump updated_at on the parent conversation so the sidebar
+                    # ordering reflects this exchange.
+                    fresh_conv = await bg.get(Conversation, conv.id)
+                    if fresh_conv is not None:
+                        # SQLAlchemy onupdate fires only on UPDATE; touch a column.
+                        fresh_conv.title = fresh_conv.title  # no-op flush trigger
                 await bg.commit()
 
     return StreamingResponse(
@@ -331,6 +349,9 @@ async def cancel(
     run_id = _active_runs.get(conv.id)
     if not run_id:
         return CancelOut(cancelled=False)
+    # Mark the run cancelled so the chat stream rolls the turn back (drops the
+    # user prompt + partial reply) — regardless of what the runtime reports.
+    _cancelled_runs.add(run_id)
     result = await runtime_client.cancel(conv.agent_id, run_id)
     return CancelOut(cancelled=bool(result.get("cancelled", False)))
 
