@@ -12,6 +12,7 @@ export type {
   AgentEvent,
   AgentFile,
   FileService,
+  ContextService,
 } from "./runtime/agentBridge.js";
 // Tool-call payload shape consumed by the built-in `tool-calls` widget;
 // re-exported here so bridge authors don't have to deep-import the schema.

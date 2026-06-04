@@ -36,6 +36,24 @@ export interface FileService {
   detach: (fileId: string) => Promise<void>;
 }
 
+/**
+ * Optional host-provided "context" capability. When a bridge exposes `context`,
+ * display widgets (table / markdown) show a toggle that adds their content to
+ * the conversation's model context as labeled text (forwarded like a file).
+ * Conversation-scoped + persistent across turns; keyed by the widget's name.
+ */
+export interface ContextService {
+  /** Widget keys currently toggled into the conversation's context. */
+  list: () => Promise<string[]>;
+  /** Upsert a widget's content into context (toggle on / live re-sync). */
+  set: (
+    key: string,
+    item: { label: string; mime: string; text: string },
+  ) => Promise<void>;
+  /** Remove a widget's content from context (toggle off). */
+  remove: (key: string) => Promise<void>;
+}
+
 export interface AgentBridge {
   /** Submit a user turn. `options.fileIds` attaches files on the first turn
    *  (before a conversation exists); afterwards the composer attaches directly
@@ -47,4 +65,6 @@ export interface AgentBridge {
   subscribeAgentOutput: (cb: (event: AgentEvent) => void) => () => void;
   /** Optional file attachments capability. */
   files?: FileService;
+  /** Optional widget-content → context capability (the context toggle). */
+  context?: ContextService;
 }

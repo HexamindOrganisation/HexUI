@@ -47,7 +47,11 @@ from ..models.user import User
 from ..schemas.chat import ActionIn, CancelOut, ChatMessageIn
 from ..sse import iter_frames
 from ..translators import get_translator
-from .conversations import conversation_files, link_files
+from .conversations import (
+    conversation_context_items,
+    conversation_files,
+    link_files,
+)
 from .me_keys import load_credentials_dict
 
 
@@ -172,6 +176,19 @@ async def post_message(
         await link_files(session, conv.id, user.id, body.file_ids)
         await session.commit()
     files_payload = _files_payload(await conversation_files(session, conv.id))
+    # Widget content toggled into context (table / markdown) rides the same
+    # `context.files` channel — the agent inlines it identically; the `name`
+    # (the widget's label) tells the model what it is.
+    for item in await conversation_context_items(session, conv.id):
+        files_payload.append(
+            {
+                "id": f"ctx:{item.key}",
+                "name": item.label,
+                "mime": item.mime,
+                "size": len(item.content.encode("utf-8")),
+                "content": item.content,
+            }
+        )
     # Ground truth for "the LLM ignores my file": shows what we actually
     # forward. `content=None` means the bytes weren't valid UTF-8 (PDF / image /
     # docx / xlsx …) so the agent inlines "[binary file omitted]" and the model

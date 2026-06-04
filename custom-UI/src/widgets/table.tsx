@@ -2,12 +2,14 @@ import { useMemo } from "react";
 import type { WidgetProps } from "../registry/types.js";
 import type { TableWidget } from "../schema/widgets/table.js";
 import { useWidgetData } from "../runtime/context.js";
+import { ContextCard } from "../lib/context-card.js";
 import { cn } from "../lib/utils.js";
 
 type CsvPayload = string | { csv: string } | string[][];
 
 export function TableWidgetComponent({
   props,
+  name,
 }: WidgetProps<TableWidget>): JSX.Element {
   const { data, loading, error } = useWidgetData<CsvPayload>(props.data_source);
 
@@ -26,85 +28,104 @@ export function TableWidgetComponent({
     return null;
   }, [data, props.data_source, props.content, props.delimiter]);
 
+  // Full data (all rows) serialized as CSV — what the context toggle forwards.
+  const contextText =
+    sourceRows && sourceRows.length > 0 ? toCsv(sourceRows) : "";
+
+  let body: JSX.Element;
   if (props.data_source && error) {
-    return (
+    body = (
       <div className="text-sm italic text-destructive">
         Failed to load table: {error.message}
       </div>
     );
-  }
-  if (props.data_source && loading && !data) {
-    return (
+  } else if (props.data_source && loading && !data) {
+    body = (
       <div className="text-sm italic text-muted-foreground">
         {props.loading_text ?? "Loading table…"}
       </div>
     );
-  }
-  if (!sourceRows || sourceRows.length === 0) {
-    return (
+  } else if (!sourceRows || sourceRows.length === 0) {
+    body = (
       <div className="text-sm italic text-muted-foreground">
         {props.empty_text ?? "No data."}
       </div>
     );
+  } else {
+    const header = hasHeader ? sourceRows[0] : null;
+    const allBody = hasHeader ? sourceRows.slice(1) : sourceRows;
+    const shown =
+      mode === "tail"
+        ? allBody.slice(Math.max(0, allBody.length - limit))
+        : allBody.slice(0, limit);
+    const columnCount = Math.max(
+      header?.length ?? 0,
+      ...shown.map((r) => r.length),
+    );
+    body = (
+      <div className="flex flex-col">
+        <div className="max-h-[360px] overflow-auto rounded-md border border-border">
+          <table className="w-full border-collapse text-sm">
+            {header && (
+              <thead className="sticky top-0 bg-muted">
+                <tr>
+                  {Array.from({ length: columnCount }).map((_, c) => (
+                    <th
+                      key={c}
+                      className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground"
+                    >
+                      {header[c] ?? ""}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {shown.map((row, r) => (
+                <tr
+                  key={r}
+                  className={cn(
+                    "border-b border-border last:border-b-0",
+                    r % 2 === 1 && "bg-muted/30",
+                  )}
+                >
+                  {Array.from({ length: columnCount }).map((_, c) => (
+                    <td key={c} className="px-3 py-1.5 align-top text-foreground">
+                      {row[c] ?? ""}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-1 text-[0.7rem] text-muted-foreground">
+          Showing {shown.length} of {allBody.length} rows ({mode})
+        </div>
+      </div>
+    );
   }
 
-  const header = hasHeader ? sourceRows[0] : null;
-  const allBody = hasHeader ? sourceRows.slice(1) : sourceRows;
-  const body =
-    mode === "tail"
-      ? allBody.slice(Math.max(0, allBody.length - limit))
-      : allBody.slice(0, limit);
-
-  const columnCount = Math.max(
-    header?.length ?? 0,
-    ...body.map((r) => r.length),
-  );
-
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
-        <table className="w-full border-collapse text-sm">
-          {header && (
-            <thead className="sticky top-0 z-10 bg-muted">
-              <tr>
-                {Array.from({ length: columnCount }).map((_, c) => (
-                  <th
-                    key={c}
-                    className="border-b border-border px-3 py-2 text-left font-medium text-muted-foreground"
-                  >
-                    {header[c] ?? ""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {body.map((row, r) => (
-              <tr
-                key={r}
-                className={cn(
-                  "border-b border-border last:border-b-0",
-                  r % 2 === 1 && "bg-muted/30",
-                )}
-              >
-                {Array.from({ length: columnCount }).map((_, c) => (
-                  <td
-                    key={c}
-                    className="px-3 py-1.5 align-top text-foreground"
-                  >
-                    {row[c] ?? ""}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-1 text-[0.7rem] text-muted-foreground">
-        Showing {body.length} of {allBody.length} rows ({mode})
-      </div>
-    </div>
+    <ContextCard
+      widgetKey={name}
+      caption={props.caption ?? name}
+      mime="text/csv"
+      text={contextText}
+    >
+      {body}
+    </ContextCard>
   );
+}
+
+/** Serialize rows back to CSV (RFC-4180-ish quoting) for the context payload. */
+function toCsv(rows: string[][]): string {
+  return rows
+    .map((r) => r.map((cell) => csvCell(String(cell ?? ""))).join(","))
+    .join("\n");
+}
+function csvCell(s: string): string {
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
 
 function coerceToRows(

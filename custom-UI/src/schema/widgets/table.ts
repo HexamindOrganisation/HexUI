@@ -9,6 +9,8 @@ export const TableWidgetSchema = {
   properties: {
     ...WidgetBaseProperties,
     type: { const: "table" },
+    /** Header label for the context-toggle card. Defaults to the widget name. */
+    caption: { type: "string" },
     /** Inline CSV content. Ignored when `data_source` is set. */
     content: { type: "string" },
     /**

@@ -7,6 +7,8 @@ export const MarkdownWidgetSchema = {
   properties: {
     ...WidgetBaseProperties,
     type: { const: "markdown" },
+    /** Header label for the context-toggle card. Defaults to the widget name. */
+    caption: { type: "string" },
     /** Inline markdown content. Mutually exclusive with `data_source`. */
     content: { type: "string" },
     /** Fetch markdown text dynamically; the resolved value must be a string. */

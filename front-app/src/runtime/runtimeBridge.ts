@@ -1,6 +1,7 @@
 import type {
   AgentBridge,
   AgentEvent,
+  ContextService,
   FileService,
   ToolCallPayload,
 } from "agent-ui";
@@ -10,6 +11,11 @@ import {
   createConversation,
   invokeConversationAction,
 } from "../api/conversations";
+import {
+  listConversationContext,
+  removeConversationContext,
+  setConversationContext,
+} from "../api/context";
 import {
   attachFiles,
   detachConversationFile,
@@ -85,6 +91,8 @@ export class RuntimeBridge implements AgentBridge {
 
   /** Host file capability — global library + conversation attachments. */
   readonly files: FileService;
+  /** Host context capability — widget content toggled into the model context. */
+  readonly context: ContextService;
 
   constructor(private readonly hooks: BridgeHooks) {
     this.files = {
@@ -101,6 +109,27 @@ export class RuntimeBridge implements AgentBridge {
       detach: async (fid) => {
         const id = this.hooks.getConversationId();
         if (id) await detachConversationFile(id, fid);
+      },
+    };
+
+    this.context = {
+      list: async () => {
+        const id = this.hooks.getConversationId();
+        if (!id) return [];
+        return (await listConversationContext(id)).map((k) => k.key);
+      },
+      set: async (key, item) => {
+        const id = this.hooks.getConversationId();
+        if (!id) return;
+        await setConversationContext(id, key, {
+          label: item.label,
+          mime: item.mime,
+          content: item.text,
+        });
+      },
+      remove: async (key) => {
+        const id = this.hooks.getConversationId();
+        if (id) await removeConversationContext(id, key);
       },
     };
   }

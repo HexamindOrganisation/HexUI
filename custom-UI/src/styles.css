@@ -530,3 +530,93 @@
 @media (prefers-reduced-motion: reduce) {
   .hxf .apill, .hxf .attach-menu, .hxf .palette { animation: none; }
 }
+
+/* ============================================================
+   Context toggle — a display widget (table / markdown) can add its
+   content to the model's context. Verbatim from the design handoff.
+   The card carries BOTH `hxf` + `w-ctx` classes, so card-state rules are
+   COMPOUND (`.hxf.w-ctx.scanning`) — a descendant combinator (`.hxf .w-ctx…`)
+   would never match and the scan bar would silently never animate.
+   ============================================================ */
+.hxf.w-ctx {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color .32s ease, box-shadow .32s ease;
+}
+.hxf.w-ctx.on {
+  border-color: var(--accent-line);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+/* one-shot glow ring when switched on */
+.hxf.w-ctx.scanning { animation: w-ctx-glow .68s cubic-bezier(.2,.7,.3,1); }
+@keyframes w-ctx-glow {
+  0%   { box-shadow: inset 3px 0 0 var(--accent), 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { box-shadow: inset 3px 0 0 var(--accent), 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+.hxf .w-ctx-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px 10px 14px; border-bottom: 1px solid var(--line-2);
+}
+.hxf .w-ctx-head .ch-ic { color: var(--text-3); display: flex; flex: 0 0 auto; }
+.hxf .w-ctx-head .ch-title {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-2);
+  letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hxf .w-ctx-body { position: relative; padding: 15px; }
+
+/* the scan sweep — overlays the body content (z-6 over non-z-indexed content) */
+.hxf .ctx-scan { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 6; }
+.hxf .ctx-scan .bar {
+  position: absolute; left: 0; right: 0; top: -64px; height: 64px; opacity: 0;
+  background: linear-gradient(to bottom, transparent,
+    color-mix(in srgb, var(--accent) 20%, transparent) 64%,
+    color-mix(in srgb, var(--accent) 34%, transparent));
+  border-bottom: 1.5px solid var(--accent);
+  box-shadow: 0 0 22px 3px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+.hxf.w-ctx.scanning .ctx-scan .bar { animation: w-ctx-scan .6s cubic-bezier(.45,.02,.25,1) forwards; }
+@keyframes w-ctx-scan {
+  0% { top: -64px; opacity: 0; } 16% { opacity: 1; } 84% { opacity: 1; } 100% { top: 100%; opacity: 0; }
+}
+
+/* the switch control */
+.hxf .ctx-toggle {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 32px; padding: 0 5px 0 11px; border-radius: var(--r-pill);
+  border: 1px solid transparent; background: transparent; cursor: pointer;
+  transition: background .15s, border-color .15s; font-family: var(--font-sans);
+}
+.hxf .ctx-toggle:hover { background: var(--surface-2); }
+.hxf .ctx-toggle.on { background: var(--accent-weak); }
+.hxf .ctx-toggle:disabled { opacity: .5; cursor: default; }
+.hxf .ctx-toggle .ct-ic { display: flex; color: var(--text-3); transition: color .2s; }
+.hxf .ctx-toggle.on .ct-ic { color: var(--accent-2); }
+.hxf .ctx-toggle .ct-label {
+  position: relative; font-size: 12.5px; font-weight: 500; color: var(--text-2);
+  transition: color .2s; white-space: nowrap;
+}
+.hxf .ctx-toggle.on .ct-label { color: var(--accent-2); }
+.hxf .ctx-toggle .ct-label .on-t,
+.hxf .ctx-toggle .ct-label .off-t { display: inline-flex; align-items: center; gap: 5px; transition: opacity .2s, transform .26s cubic-bezier(.34,1.4,.5,1); }
+.hxf .ctx-toggle .ct-label .on-t { position: absolute; left: 0; top: 0; opacity: 0; transform: translateY(4px); }
+.hxf .ctx-toggle .ct-label .off-t { opacity: 1; transform: none; }
+.hxf .ctx-toggle.on .ct-label .on-t { opacity: 1; transform: none; }
+.hxf .ctx-toggle.on .ct-label .off-t { opacity: 0; transform: translateY(-4px); }
+.hxf .ctx-sw {
+  position: relative; width: 40px; height: 23px; flex: 0 0 auto;
+  border-radius: var(--r-pill); background: var(--surface-3); transition: background .3s ease;
+}
+.hxf .ctx-toggle.on .ctx-sw { background: var(--accent); }
+.hxf .ctx-sw .knob {
+  position: absolute; top: 3px; left: 3px; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--text-3); transition: transform .42s cubic-bezier(.34,1.56,.5,1), background .3s ease;
+}
+.hxf .ctx-toggle.on .ctx-sw .knob { transform: translateX(17px); background: var(--bg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hxf.w-ctx.scanning { animation: none; }
+  .hxf.w-ctx.scanning .ctx-scan .bar { animation: none; }
+}

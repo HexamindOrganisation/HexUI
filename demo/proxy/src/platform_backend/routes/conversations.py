@@ -17,11 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth.implicit_user import current_user
 from ..db import get_session
 from ..models.conversation import Conversation
+from ..models.conversation_context import ConversationContext
 from ..models.conversation_file import ConversationFile
 from ..models.file import File as FileModel
 from ..models.folder import Folder
 from ..models.message import Message
 from ..models.user import User
+from ..schemas.context import ContextItemIn, ContextKeyOut
 from ..schemas.conversation import (
     ConversationCreate,
     ConversationOut,
@@ -219,6 +221,86 @@ async def detach_conversation_file(
         delete(ConversationFile).where(
             ConversationFile.conversation_id == conv_id,
             ConversationFile.file_id == file_id,
+        )
+    )
+    await session.commit()
+
+
+# ---------------------------------------------------------------------------
+# Conversation context items (widget content toggled into the model's context)
+# ---------------------------------------------------------------------------
+
+async def conversation_context_items(
+    session: AsyncSession, conv_id: uuid.UUID
+) -> list[ConversationContext]:
+    """All context items toggled on for a conversation, oldest-first."""
+    result = await session.execute(
+        select(ConversationContext)
+        .where(ConversationContext.conversation_id == conv_id)
+        .order_by(ConversationContext.updated_at)
+    )
+    return list(result.scalars().all())
+
+
+@router.get("/{conv_id}/context", response_model=list[ContextKeyOut])
+async def list_conversation_context(
+    conv_id: uuid.UUID,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[ContextKeyOut]:
+    await _get_owned(session, user.id, conv_id)
+    items = await conversation_context_items(session, conv_id)
+    return [ContextKeyOut(key=i.key, label=i.label) for i in items]
+
+
+@router.put("/{conv_id}/context/{key}", status_code=status.HTTP_204_NO_CONTENT)
+async def set_conversation_context(
+    conv_id: uuid.UUID,
+    key: str,
+    body: ContextItemIn,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Upsert a widget's content into the conversation's context (toggle on /
+    re-sync). Keyed by `key` (the widget name) so it's idempotent."""
+    await _get_owned(session, user.id, conv_id)
+    existing = (
+        await session.execute(
+            select(ConversationContext).where(
+                ConversationContext.conversation_id == conv_id,
+                ConversationContext.key == key,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        existing.label = body.label
+        existing.mime = body.mime
+        existing.content = body.content
+    else:
+        session.add(
+            ConversationContext(
+                conversation_id=conv_id,
+                key=key,
+                label=body.label,
+                mime=body.mime,
+                content=body.content,
+            )
+        )
+    await session.commit()
+
+
+@router.delete("/{conv_id}/context/{key}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_conversation_context(
+    conv_id: uuid.UUID,
+    key: str,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    await _get_owned(session, user.id, conv_id)
+    await session.execute(
+        delete(ConversationContext).where(
+            ConversationContext.conversation_id == conv_id,
+            ConversationContext.key == key,
         )
     )
     await session.commit()
