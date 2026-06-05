@@ -38,9 +38,9 @@ product**, driven from a single variable (`page.main_color` → `--accent`).
                                 ▼
 ┌───────────────────────────────────────────────────────────────┐
 │  demo/agent-server  (reference developer backend)             │
-│   each agent declares a `framework` and forwards that          │
-│   framework's NATIVE events, tagged. You replace this with     │
-│   your own backend (CONTRACT.md).                              │
+│   each agent declares a `framework` and forwards that         │
+│   framework's NATIVE events, tagged. You replace this with    │
+│   your own backend (CONTRACT.md).                             │
 └───────────────────────────────────────────────────────────────┘
 ```
 
