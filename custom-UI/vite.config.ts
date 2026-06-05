@@ -25,6 +25,11 @@ export default defineConfig({
         "class-variance-authority",
         "clsx",
         "tailwind-merge",
+        // Heavy, optional-by-feature deps — kept external so the lib stays lean
+        // and the consumer's bundler code-splits/tree-shakes them (used only by
+        // the markdown renderer's math + code highlighting).
+        "katex",
+        "lowlight",
         "node:fs",
         "node:path",
         "node:process",

@@ -1,13 +1,28 @@
 import type { ReactNode } from "react";
+import katex from "katex";
+import { createLowlight, common } from "lowlight";
 import { cn } from "./utils.js";
 
 /**
- * Safe markdown renderer. Returns React nodes only — never raw HTML — so
- * React's text-escaping is the security boundary. Any embedded HTML in the
- * source is treated as literal text. Links are URL-scheme validated.
+ * Safe markdown renderer. Returns React nodes only — never raw HTML from the
+ * source — so React's text-escaping is the security boundary. Any embedded HTML
+ * in the source is treated as literal text. Links are URL-scheme validated.
+ *
+ * Two features render richer content than plain text, both from trusted
+ * generators (not the raw source):
+ *   - **Code** is tokenized by highlight.js (via `lowlight`), which emits a node
+ *     tree we map to React `<span>`s — still no `innerHTML`.
+ *   - **Math** (`\(…\)`, `\[…\]`, `$$…$$`) is typeset by KaTeX. KaTeX produces
+ *     its own markup, injected via `dangerouslySetInnerHTML`. This is the one
+ *     controlled exception to the no-HTML rule: KaTeX is run with
+ *     `trust:false` + `throwOnError:false`, so even hostile LaTeX cannot emit
+ *     script/dangerous HTML — malformed input renders as inert error text.
  *
  * Shared by the `markdown` widget and the `ai-response` transcript so assistant
- * prose renders headings / code / lists / links consistently.
+ * prose renders headings / code / lists / links / math consistently.
+ *
+ * Note: consumers must load KaTeX's stylesheet (`import "katex/dist/katex.min.css"`)
+ * for math to display correctly.
  */
 export function renderMarkdown(src: string): ReactNode {
   const lines = src.replace(/\r\n?/g, "\n").split("\n");
@@ -39,9 +54,22 @@ export function renderMarkdown(src: string): ReactNode {
           key={key++}
           className="overflow-auto rounded-md bg-muted p-3 text-xs"
         >
-          <code data-language={lang || undefined}>{code.join("\n")}</code>
+          <code className="hljs" data-language={lang || undefined}>
+            {highlightToReact(code.join("\n"), lang)}
+          </code>
         </pre>,
       );
+      continue;
+    }
+
+    // Display math block: a line starting with `\[` or `$$`, closed by the
+    // matching delimiter (on the same line or a later one).
+    const blockMath = blockMathAt(lines, i);
+    if (blockMath) {
+      blocks.push(
+        renderMath(blockMath.tex, key++, { display: true, block: true }),
+      );
+      i = blockMath.next;
       continue;
     }
 
@@ -154,6 +182,8 @@ export function renderMarkdown(src: string): ReactNode {
         /^>\s?/.test(l) ||
         /^[-*+]\s+/.test(l) ||
         /^\d+\.\s+/.test(l) ||
+        /^\\\[/.test(l) ||
+        /^\$\$/.test(l) ||
         /^(-{3,}|\*{3,}|_{3,})\s*$/.test(l)
       ) {
         break;
@@ -171,9 +201,140 @@ export function renderMarkdown(src: string): ReactNode {
   return blocks;
 }
 
+// ── Math (KaTeX) ─────────────────────────────────────────────────────────────
+
 /**
- * Inline parser: handles `code`, **bold**, *italic*, [text](url).
- * Operates on already-text strings; emits React nodes only.
+ * If the line at `i` opens a display-math block (`\[` or `$$`), consume through
+ * the matching close delimiter and return the LaTeX + the next line index.
+ * Returns null when there's no opener or no close is found (so the text is left
+ * to normal paragraph handling rather than swallowing the rest of the doc).
+ */
+function blockMathAt(
+  lines: string[],
+  i: number,
+): { tex: string; next: number } | null {
+  const open = lines[i]!.trim();
+  let close: string;
+  if (open.startsWith("\\[")) close = "\\]";
+  else if (open.startsWith("$$")) close = "$$";
+  else return null;
+
+  const first = open.slice(2); // both openers are 2 chars
+  const sameLineClose = first.indexOf(close);
+  if (sameLineClose !== -1) {
+    return { tex: first.slice(0, sameLineClose).trim(), next: i + 1 };
+  }
+
+  const buf: string[] = first ? [first] : [];
+  let j = i + 1;
+  while (j < lines.length) {
+    const l = lines[j]!;
+    const ci = l.indexOf(close);
+    if (ci !== -1) {
+      buf.push(l.slice(0, ci));
+      return { tex: buf.join("\n").trim(), next: j + 1 };
+    }
+    buf.push(l);
+    j++;
+  }
+  return null;
+}
+
+/** Typeset a LaTeX fragment with KaTeX. Safe (trust:false, throwOnError:false). */
+function renderMath(
+  tex: string,
+  key: number,
+  opts: { display: boolean; block?: boolean },
+): ReactNode {
+  let html: string;
+  try {
+    html = katex.renderToString(tex, {
+      displayMode: opts.display,
+      throwOnError: false,
+      trust: false,
+      output: "htmlAndMathml",
+    });
+  } catch {
+    // Should be unreachable with throwOnError:false, but never crash the render.
+    return (
+      <code key={key} className="rounded bg-muted px-1 py-0.5 text-[0.85em]">
+        {tex}
+      </code>
+    );
+  }
+  if (opts.block) {
+    return (
+      <div
+        key={key}
+        className="my-3 overflow-x-auto"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+  return (
+    <span
+      key={key}
+      className={opts.display ? "inline-block align-middle" : undefined}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+// ── Code highlighting (highlight.js via lowlight → React nodes) ──────────────
+
+const lowlight = createLowlight(common);
+const LANGS = new Set(lowlight.listLanguages());
+
+/**
+ * Tokenize `code` with highlight.js and return React `<span>`s (no innerHTML).
+ * Uses the fence's language hint when known, else auto-detects; falls back to
+ * plain text if highlighting fails.
+ */
+function highlightToReact(code: string, lang: string): ReactNode {
+  let tree;
+  try {
+    tree =
+      lang && LANGS.has(lang)
+        ? lowlight.highlight(lang, code)
+        : lowlight.highlightAuto(code);
+  } catch {
+    try {
+      tree = lowlight.highlightAuto(code);
+    } catch {
+      return code;
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (tree.children as any[]).map((n, idx) => hastToReact(n, idx));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hastToReact(node: any, key: number): ReactNode {
+  if (node.type === "text") return node.value;
+  if (node.type === "element") {
+    const cls = node.properties?.className;
+    const className = Array.isArray(cls)
+      ? cls.join(" ")
+      : typeof cls === "string"
+        ? cls
+        : undefined;
+    return (
+      <span key={key} className={className}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {(node.children as any[])?.map((c, idx) => hastToReact(c, idx))}
+      </span>
+    );
+  }
+  return null;
+}
+
+// ── Inline parsing ───────────────────────────────────────────────────────────
+
+/**
+ * Inline parser: handles math (`\(…\)`, `\[…\]`, `$$…$$`), `code`, **bold**,
+ * *italic*, [text](url). Math is matched first so its LaTeX body isn't mangled
+ * by the emphasis/code rules. Operates on already-text strings; emits React
+ * nodes only (KaTeX output excepted — see the module docstring).
  */
 function renderInline(text: string): ReactNode {
   const out: ReactNode[] = [];
@@ -181,6 +342,21 @@ function renderInline(text: string): ReactNode {
   let rest = text;
 
   const patterns: { re: RegExp; build: (m: RegExpExecArray) => ReactNode }[] = [
+    // Inline math \( ... \)
+    {
+      re: /\\\(([\s\S]+?)\\\)/,
+      build: (m) => renderMath(m[1]!, key++, { display: false }),
+    },
+    // Display math appearing mid-line: \[ ... \] or $$ ... $$ (rare; the
+    // block-level handler covers the common own-line case).
+    {
+      re: /\\\[([\s\S]+?)\\\]/,
+      build: (m) => renderMath(m[1]!, key++, { display: true }),
+    },
+    {
+      re: /\$\$([^\n]+?)\$\$/,
+      build: (m) => renderMath(m[1]!, key++, { display: true }),
+    },
     {
       re: /`([^`\n]+)`/,
       build: (m) => (

@@ -620,3 +620,68 @@
   .hxf.w-ctx.scanning { animation: none; }
   .hxf.w-ctx.scanning .ctx-scan .bar { animation: none; }
 }
+
+/* ── Code syntax highlighting (highlight.js token classes) ──────────────────
+ * Emitted by the markdown renderer via lowlight. A muted, design-token-aware
+ * palette so code stays calm and reads on both light and dark `bg-muted`. Token
+ * hues brighten under `.dark` (shadcn's dark-mode class). Comments derive from
+ * the foreground token so they always follow the theme. */
+.hljs {
+  --hl-comment: hsl(var(--muted-foreground));
+  --hl-keyword: #7c3aed;
+  --hl-string: #15803d;
+  --hl-number: #b45309;
+  --hl-builtin: #0e7490;
+  --hl-function: #1d4ed8;
+  --hl-attr: #be185d;
+  color: hsl(var(--foreground));
+}
+.dark .hljs {
+  --hl-keyword: #c4b5fd;
+  --hl-string: #86efac;
+  --hl-number: #fcd34d;
+  --hl-builtin: #67e8f9;
+  --hl-function: #93c5fd;
+  --hl-attr: #f9a8d4;
+}
+.hljs-comment,
+.hljs-quote { color: var(--hl-comment); font-style: italic; }
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-doctag,
+.hljs-name,
+.hljs-link { color: var(--hl-keyword); }
+.hljs-string,
+.hljs-meta .hljs-string,
+.hljs-regexp,
+.hljs-addition { color: var(--hl-string); }
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-deletion { color: var(--hl-number); }
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-type,
+.hljs-class .hljs-title { color: var(--hl-builtin); }
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_,
+.hljs-selector-id,
+.hljs-selector-class { color: var(--hl-function); }
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-property,
+.hljs-params { color: var(--hl-attr); }
+.hljs-meta,
+.hljs-tag,
+.hljs-comment .hljs-doctag { color: var(--hl-comment); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 600; }
+
+/* KaTeX display blocks: keep tight default margins inside chat prose and let
+ * wide equations scroll horizontally rather than overflow the bubble. */
+.katex-display { margin: 0; }

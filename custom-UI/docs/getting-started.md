@@ -48,6 +48,22 @@ In your app's CSS entry:
 @import "agent-ui/style.css";    /* structural shell, layout chrome, diagnostics */
 ```
 
+### Math rendering (optional)
+
+The markdown renderer (used by the `markdown` widget and the `ai-response`
+transcript) typesets LaTeX math — `\( … \)` inline and `\[ … \]` / `$$ … $$` as
+display blocks — with [KaTeX](https://katex.org). For it to display, import
+KaTeX's stylesheet once in your app entry:
+
+```ts
+import "katex/dist/katex.min.css";
+```
+
+Code blocks are syntax-highlighted automatically (highlight.js via `lowlight`),
+detecting the language from the fence (```` ```ts ````) or auto-detecting when
+none is given — no extra setup. `katex` and `lowlight` are dependencies of
+`agent-ui`, kept external from its bundle so your app code-splits them.
+
 ### Recommended: load Inter
 
 The Tailwind preset declares `Inter` at the top of the `font-sans` stack

@@ -14,6 +14,10 @@ import "@fontsource/source-serif-4/400.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
+// KaTeX styles + fonts — required for the markdown renderer's math typesetting
+// (\( … \), \[ … \], $$ … $$) to display correctly.
+import "katex/dist/katex.min.css";
+
 import "./styles.css";
 
 
