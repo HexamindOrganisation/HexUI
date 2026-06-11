@@ -1,23 +1,16 @@
-"""Healthcare clinical-assistant agent (OpenAI Agents SDK) + its HexaUI wrapper.
+"""Healthcare clinical-assistant agent — pure OpenAI Agents SDK.
 
-Top: the agent (tools + ``agent``) and how it's invoked — ``stream`` (plain SDK)
-and ``stream_as`` (the same agent gated by HexGate policy), vendored from
-``hexgate/examples/healthcare_agent.py``. Bottom: ``HealthcareAgent``, the thin
-contract wrapper the server runs (event projection lives in ``openai_agents``).
+The tools + ``agent``, and how to invoke it: ``stream`` (plain SDK) and
+``stream_as`` (the same agent gated by HexGate policy). Vendored from
+``hexgate/examples/healthcare_agent.py``. The HexaUI contract wrapper that the
+server runs lives in ``healthcare.py``.
 """
 
 from __future__ import annotations
 
-import logging
-import os
 from typing import Any, AsyncIterator
 
-from agents import Agent, Runner, function_tool, set_default_openai_key
-
-from .. import protocol
-from .openai_agents import agent_input, to_native_event
-
-logger = logging.getLogger("agent_server.healthcare")
+from agents import Agent, Runner, function_tool
 
 
 # ── Tools — stubs, verbatim from the upstream example ────────────────────────
@@ -126,45 +119,3 @@ async def stream_as(input: Any, *, role: str) -> AsyncIterator[Any]:
     result = HexgateRunner().run_streamed(agent, input, user=user)
     async for event in result.stream_events():
         yield event
-
-
-# ── HexaUI contract wrapper ──────────────────────────────────────────────────
-
-
-class HealthcareAgent:
-    """The contract agent the server runs: resolves the OpenAI key, picks the
-    plain or HexGate-gated path, and forwards each SDK event as a native event.
-    """
-
-    framework = "openai-agents"
-
-    async def run(
-        self, *, input: dict[str, Any], context: dict[str, Any]
-    ) -> AsyncIterator[dict]:
-        # .env key wins; fall back to the per-run key from the Settings UI.
-        api_key = os.getenv("OPENAI_API_KEY") or (
-            (context or {}).get("credentials") or {}
-        ).get("openai_api_key")
-        if not api_key:
-            yield protocol.error(
-                "No OpenAI API key available. Set OPENAI_API_KEY in the "
-                "agent-server .env, or add one in the HexaUI Settings UI."
-            )
-            return
-        set_default_openai_key(api_key)
-
-        # Use the HexGate-gated path whenever HexGate is configured; plain SDK otherwise.
-        if os.getenv("HEXGATE_KEY"):
-            events = stream_as(agent_input(input), role=os.getenv("HEXGATE_ROLE", "nurse"))
-        else:
-            events = stream(agent_input(input))
-
-        tool_names_by_id: dict[str, str] = {}
-        try:
-            async for sdk_event in events:
-                native_event = to_native_event(sdk_event, tool_names_by_id)
-                if native_event is not None:
-                    yield native_event
-        except Exception as exception:  # noqa: BLE001 — degrade to a visible error event
-            logger.exception("healthcare run failed")
-            yield protocol.error(f"agent failed: {exception}")

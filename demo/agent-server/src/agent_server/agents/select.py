@@ -27,7 +27,7 @@ def select_agent(agent_id: str, context: dict[str, Any]) -> Agent:
     # Real OpenAI Agents SDK agent (it picks the plain vs HexGate path itself).
     # Lazy import so a missing openai-agents/hexgate install doesn't break the roster.
     if agent_id == "healthcare":
-        from .healthcare_agent import HealthcareAgent
+        from .healthcare import HealthcareAgent
 
         return HealthcareAgent()
 
