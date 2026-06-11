@@ -26,13 +26,9 @@ def select_agent(agent_id: str, context: dict[str, Any]) -> Agent:
     creds = (context or {}).get("credentials") or {}
     llm_on = get_settings().enable_llm
 
-    # A real OpenAI Agents SDK agent (not a canned demo). Routed by id so the
-    # `openai-agents` framework still maps to the demo agent (Forge) for others.
-    # The agent + its invocation helpers live in `healthcare_agent` (pure SDK);
-    # `OpenAIAgentsAgent` is the reusable framework→contract bridge. Here we just
-    # pick the streamer: plain SDK, or the HexGate-wrapped `run_as` (opt-in via
-    # HEALTHCARE_HEXGATE; role via HEALTHCARE_ROLE, default `nurse`). Lazy import
-    # so a missing `openai-agents`/`hexgate` install doesn't break the roster.
+    # Real OpenAI Agents SDK agent, routed by id. Pick the streamer: plain SDK,
+    # or HexGate-wrapped (HEALTHCARE_HEXGATE; role from HEALTHCARE_ROLE). Lazy
+    # import so a missing openai-agents/hexgate install doesn't break the roster.
     if agent_id == "healthcare":
         from . import healthcare_agent
         from .openai_agents import OpenAIAgentsAgent

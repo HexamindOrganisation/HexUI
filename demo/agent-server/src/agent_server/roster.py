@@ -53,14 +53,12 @@ AGENTS: list[dict[str, str]] = [
         "ui_url": "/agents/orbit/ui",
         "framework": "google-adk",
     },
-    # Healthcare — a real OpenAI Agents SDK agent (clinical assistant, HIPAA
-    # demo) vendored from hexgate; Hexgate wrapping is opt-in (HEALTHCARE_HEXGATE).
-    # Streams the SDK's native events; the proxy's `openai-agents` translator
-    # normalizes them.
+    # Healthcare — a real OpenAI Agents SDK agent; HexGate wrapping is opt-in
+    # (HEALTHCARE_HEXGATE).
     {
         "id": "healthcare",
         "name": "Healthcare",
-        "role": "Clinical assistant (HIPAA demo)",
+        "role": "Clinical assistant",
         "main_color": "#0ea5b7",
         "ui_url": "/agents/healthcare/ui",
         "framework": "openai-agents",

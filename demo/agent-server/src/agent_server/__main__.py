@@ -7,9 +7,8 @@ from pathlib import Path
 
 import uvicorn
 
-# The developer's backend reads its secrets (OPENAI_API_KEY, HEXGATE_KEY) from
-# the environment or a local .env — like any app. Real env vars win; the .env
-# just fills the gaps. Loaded once at startup, before any request reads a key.
+# Load secrets (OPENAI_API_KEY, HEXGATE_KEY) from the agent-server .env. Real
+# env vars take precedence.
 try:
     from dotenv import load_dotenv
 

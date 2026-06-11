@@ -1,23 +1,8 @@
-"""Healthcare clinical-assistant agent — the developer-side artifact.
+"""Healthcare clinical-assistant agent — pure OpenAI Agents SDK, no HexaUI.
 
-Pure OpenAI Agents SDK code: the tools, the ``agent``, and how you invoke it.
-Nothing here knows about HexaUI — no SSE, no event projection, no platform
-contract. Vendored from ``hexgate/examples/healthcare_agent.py`` (minus the
-demo ``main``); the HexaUI contract glue lives next door in ``openai_agents.py``.
-
-Two invocation helpers put the security story side by side:
-
-* ``run(input)``            — the plain OpenAI Agents SDK (``agents.Runner``).
-* ``run_as(input, role=…)`` — the SAME agent gated by HexGate policy. The only
-  differences are ``HexgateRunner`` in place of ``Runner`` and a ``User(role=…)``
-  scope; the streamed events are identical, so a forwarder written for the plain
-  SDK works unchanged.
-
-Run it standalone, no HexaUI:
-
-    python -m agent_server.agents.healthcare_agent
-
-(needs ``OPENAI_API_KEY``, and for ``run_as`` also ``HEXGATE_KEY``, in env/.env).
+Vendored from ``hexgate/examples/healthcare_agent.py``. Two invocation helpers
+show the security story side by side: ``run`` (plain SDK) and ``run_as`` (the
+same agent gated by HexGate policy). The HexaUI glue lives in ``openai_agents.py``.
 """
 
 from __future__ import annotations
@@ -116,27 +101,16 @@ agent = Agent(
 
 
 async def run(input: Any) -> AsyncIterator[Any]:
-    """Stream the agent with the plain OpenAI Agents SDK runner.
-
-    ``input`` is whatever ``Runner.run_streamed`` accepts — a prompt string or a
-    transcript (list of role/content items). Yields the SDK's native
-    ``stream_events()`` items.
-    """
+    """Stream the agent with the plain SDK runner, yielding ``stream_events()`` items."""
     result = Runner.run_streamed(agent, input)
     async for event in result.stream_events():
         yield event
 
 
 async def run_as(input: Any, *, role: str) -> AsyncIterator[Any]:
-    """Stream the agent through HexGate as ``role`` — the same call as :func:`run`.
-
-    The only differences from the plain SDK path: ``HexgateRunner`` (which gates
-    every tool call against the policy the platform resolves for the agent's
-    name) instead of ``Runner``, and a ``User(role=…)`` scope. The yielded events
-    are identical, so the forwarder/translator is none the wiser.
-
-    ``HexgateRunner()`` reads ``HEXGATE_KEY`` from the environment (loaded from
-    the agent-server's ``.env`` at startup).
+    """Same as :func:`run`, but through HexGate as ``role`` — every tool call is
+    policy-gated. Identical event stream; only the runner and a ``User`` differ.
+    ``HexgateRunner()`` reads ``HEXGATE_KEY`` from the environment.
     """
     from hexgate.adapters.openai import HexgateRunner
     from hexgate.runtime import User
@@ -145,22 +119,3 @@ async def run_as(input: Any, *, role: str) -> AsyncIterator[Any]:
     result = HexgateRunner().run_streamed(agent, input, user=user)
     async for event in result.stream_events():
         yield event
-
-
-if __name__ == "__main__":
-    # Standalone demo — plain OpenAI Agents SDK wrapped by HexGate, no HexaUI.
-    import asyncio
-
-    try:
-        from dotenv import load_dotenv
-
-        load_dotenv()  # best-effort: pick up OPENAI_API_KEY / HEXGATE_KEY
-    except ImportError:
-        pass
-
-    async def _demo() -> None:
-        prompt = "Show the full record for patient 88."
-        async for event in run_as(prompt, role="nurse"):
-            print(event)
-
-    asyncio.run(_demo())
