@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch the HexaUI backends for local dev — agent-server (:8080) + proxy (:8000)
+# Launch the HexaUI backends for local dev — agent-server (:8080) + proxy (:8001)
 # on a throwaway SQLite DB (no Postgres needed). Run from the repo root under WSL:
 #
 #     bash demo/scripts/run-backends.sh
@@ -16,7 +16,7 @@ export PLATFORM_AGENT_BACKEND_URL="http://127.0.0.1:8080"
 
 # Stop by PORT, never `pkill -f agent_server` — that pattern matches this very
 # script's command line and would SIGTERM the launcher itself.
-cleanup() { fuser -k 8080/tcp 8000/tcp 2>/dev/null || true; }
+cleanup() { fuser -k 8080/tcp 8001/tcp 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
 # Set AGENT_ENABLE_LLM=1 to route the `probe` agent to the real OpenAI-backed
@@ -27,7 +27,7 @@ echo "starting agent-server :8080 (AGENT_ENABLE_LLM=$AGENT_ENABLE_LLM) …"
 PYTHONPATH=demo/agent-server/src \
   demo/agent-server/.venv/bin/python -m agent_server &
 
-echo "starting proxy :8000 (sqlite: $PLATFORM_DATABASE_URL) …"
+echo "starting proxy :8001 (sqlite: $PLATFORM_DATABASE_URL) …"
 PYTHONPATH=demo/proxy/src:demo/packages/hexa-events/src \
   demo/proxy/.venv/bin/python -m platform_backend &
 

@@ -40,7 +40,7 @@ class Settings(BaseSettings):
         "(env PLATFORM_AGENT_BACKEND_URL).",
     )
     host: str = "127.0.0.1"
-    port: int = 8000
+    port: int = 8001
     log_level: str = "info"
 
 

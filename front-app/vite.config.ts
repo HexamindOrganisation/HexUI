@@ -7,9 +7,9 @@ import react from "@vitejs/plugin-react";
 // runtime.
 //
 // Override the target with PLATFORM_BACKEND_URL when running the backend
-// somewhere other than the default :8000.
+// somewhere other than the default :8001.
 const BACKEND_URL =
-  process.env.PLATFORM_BACKEND_URL ?? "http://127.0.0.1:8000";
+  process.env.PLATFORM_BACKEND_URL ?? "http://127.0.0.1:8001";
 
 export default defineConfig({
   plugins: [react()],
