@@ -31,6 +31,11 @@ def select_agent(agent_id: str, context: dict[str, Any]) -> Agent:
 
         return HealthcareAgent()
 
+    if agent_id == "devops":
+        from .devops import DevopsAgent
+
+        return DevopsAgent()
+
     if framework == "langchain":
         return LangChainDemoAgent()
     if framework == "openai-agents":

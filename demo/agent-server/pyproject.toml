@@ -14,6 +14,8 @@ llm = [
     "openai>=1.40",            # Probe (native)
     "google-genai>=1.0",       # Orbit (google-adk / Gemini)
     "openai-agents>=0.0.10",   # Healthcare (openai-agents SDK)
+    "google-adk>=1.0",         # DevOps (google-adk runtime)
+    "litellm>=1.40",           # DevOps model backend (openai/* via Google ADK)
 ]
 dev = [
     "pytest>=8",

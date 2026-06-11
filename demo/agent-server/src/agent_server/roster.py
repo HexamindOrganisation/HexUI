@@ -63,6 +63,16 @@ AGENTS: list[dict[str, str]] = [
         "ui_url": "/agents/healthcare/ui",
         "framework": "openai-agents",
     },
+    # DevOps — a real Google ADK agent (LiteLLM over an OpenAI model); HexGate
+    # wrapping is opt-in (enabled by setting HEXGATE_KEY).
+    {
+        "id": "devops",
+        "name": "DevOps",
+        "role": "Infra assistant",
+        "main_color": "#8b5cf6",
+        "ui_url": "/agents/devops/ui",
+        "framework": "google-adk",
+    },
 ]
 
 _BY_ID = {a["id"]: a for a in AGENTS}
