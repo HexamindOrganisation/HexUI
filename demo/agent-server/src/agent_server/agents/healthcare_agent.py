@@ -117,17 +117,12 @@ async def stream(input: Any) -> AsyncIterator[Any]:
 
 async def stream_as(input: Any, *, role: str) -> AsyncIterator[Any]:
     """Same as :func:`stream`, but through HexGate as ``role`` — every tool call is
-    policy-gated. Identical event stream; only the runner and a ``User`` differ.
-    ``HexgateRunner()`` reads ``HEXGATE_KEY`` from the environment.
+    policy-gated.
     """
     from hexgate.adapters.openai import HexgateRunner
     from hexgate.runtime import User
 
-    user = User(
-        user_id=f"hexaui-demo-{role}",
-        session_id=f"hexaui-demo-healthcare-{role}",
-        role=role,
-    )
+    user = User(user_id="hexui-demo", session_id="hexui-demo-healthcare", role=role)
     result = HexgateRunner().run_streamed(agent, input, user=user)
     async for event in result.stream_events():
         yield event
@@ -158,8 +153,9 @@ class HealthcareAgent:
             return
         set_default_openai_key(api_key)
 
-        if os.getenv("HEALTHCARE_HEXGATE", "0") == "1":
-            events = stream_as(agent_input(input), role=os.getenv("HEALTHCARE_ROLE", "nurse"))
+        # Use the HexGate-gated path whenever HexGate is configured; plain SDK otherwise.
+        if os.getenv("HEXGATE_KEY"):
+            events = stream_as(agent_input(input), role=os.getenv("HEXGATE_ROLE", "nurse"))
         else:
             events = stream(agent_input(input))
 

@@ -54,7 +54,7 @@ AGENTS: list[dict[str, str]] = [
         "framework": "google-adk",
     },
     # Healthcare — a real OpenAI Agents SDK agent; HexGate wrapping is opt-in
-    # (HEALTHCARE_HEXGATE).
+    # (enabled by setting HEXGATE_KEY).
     {
         "id": "healthcare",
         "name": "Healthcare",
