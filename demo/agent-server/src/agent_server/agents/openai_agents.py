@@ -1,28 +1,18 @@
-"""OpenAI Agents SDK → HexaUI contract bridge (reusable for any ``agents.Agent``).
+"""Project OpenAI Agents SDK stream events into HexaUI native events.
 
-``OpenAIAgentsAgent`` drives a *streamer* — an async ``(input) -> AsyncIterator``
-of SDK ``stream_events()`` items — and forwards each as a native event the proxy
-translates. ``select.py`` picks the streamer (plain ``run`` vs HexGate ``run_as``).
-The OpenAI key comes from the environment (the agent-server ``.env``).
+Reusable for any ``agents.Agent``: ``to_native_event`` maps one
+``stream_events()`` item to the native JSON event the proxy's
+``OpenAIAgentsTranslator`` reads; ``agent_input`` shapes HexaUI input for the SDK.
 """
 
 from __future__ import annotations
 
-import logging
-import os
-from typing import Any, AsyncIterator, Callable
-
-from agents import set_default_openai_key
+from typing import Any
 
 from .. import protocol
 
-logger = logging.getLogger("agent_server.openai_agents")
 
-# A streamer yields one run's native ``stream_events()`` items for some input.
-Streamer = Callable[[Any], AsyncIterator[Any]]
-
-
-def _agent_input(input: dict[str, Any]) -> Any:
+def agent_input(input: dict[str, Any]) -> Any:
     """HexaUI ``{"messages": [...]}`` → SDK input (full transcript, or last user text)."""
     messages = (input or {}).get("messages")
     if isinstance(messages, list) and messages:
@@ -30,7 +20,7 @@ def _agent_input(input: dict[str, Any]) -> Any:
     return protocol.last_user_text(input)
 
 
-def _to_native_event(sdk_event: Any, tool_names_by_id: dict[str, str]) -> dict | None:
+def to_native_event(sdk_event: Any, tool_names_by_id: dict[str, str]) -> dict | None:
     """One SDK ``stream_events()`` item → the native JSON event the proxy reads
     (``None`` to drop it).
 
@@ -105,40 +95,3 @@ def _to_native_event(sdk_event: Any, tool_names_by_id: dict[str, str]) -> dict |
 
     # Everything else (agent_updated, handoffs, …) is dropped, like the translator.
     return None
-
-
-class OpenAIAgentsAgent:
-    """Contract agent for any OpenAI Agents SDK agent: drives a streamer and
-    forwards each SDK event as a native event. ``select.py`` picks the streamer.
-    """
-
-    framework = "openai-agents"
-
-    def __init__(self, streamer: Streamer) -> None:
-        self._streamer = streamer
-
-    async def run(
-        self, *, input: dict[str, Any], context: dict[str, Any]
-    ) -> AsyncIterator[dict]:
-        # .env key wins; fall back to the per-run key from the Settings UI.
-        api_key = os.getenv("OPENAI_API_KEY") or (
-            (context or {}).get("credentials") or {}
-        ).get("openai_api_key")
-        if not api_key:
-            yield protocol.error(
-                "No OpenAI API key available. Set OPENAI_API_KEY in the "
-                "agent-server .env, or add one in the HexaUI Settings UI."
-            )
-            return
-
-        set_default_openai_key(api_key)
-
-        tool_names_by_id: dict[str, str] = {}
-        try:
-            async for sdk_event in self._streamer(_agent_input(input)):
-                native_event = _to_native_event(sdk_event, tool_names_by_id)
-                if native_event is not None:
-                    yield native_event
-        except Exception as exception:  # noqa: BLE001 — degrade to a visible error event
-            logger.exception("openai-agents run failed")
-            yield protocol.error(f"agent failed: {exception}")

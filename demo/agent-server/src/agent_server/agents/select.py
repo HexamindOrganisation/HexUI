@@ -8,8 +8,6 @@ agent uses the deterministic echo, or the optional OpenAI-backed `LLMAgent` when
 
 from __future__ import annotations
 
-import os
-from functools import partial
 from typing import Any
 
 from ..config import get_settings
@@ -26,19 +24,12 @@ def select_agent(agent_id: str, context: dict[str, Any]) -> Agent:
     creds = (context or {}).get("credentials") or {}
     llm_on = get_settings().enable_llm
 
-    # Real OpenAI Agents SDK agent, routed by id. Pick the streamer: plain SDK,
-    # or HexGate-wrapped (HEALTHCARE_HEXGATE; role from HEALTHCARE_ROLE). Lazy
-    # import so a missing openai-agents/hexgate install doesn't break the roster.
+    # Real OpenAI Agents SDK agent (it picks the plain vs HexGate path itself).
+    # Lazy import so a missing openai-agents/hexgate install doesn't break the roster.
     if agent_id == "healthcare":
-        from . import healthcare_agent
-        from .openai_agents import OpenAIAgentsAgent
+        from .healthcare_agent import HealthcareAgent
 
-        if os.getenv("HEALTHCARE_HEXGATE", "0") == "1":
-            role = os.getenv("HEALTHCARE_ROLE", "nurse")
-            streamer = partial(healthcare_agent.run_as, role=role)
-        else:
-            streamer = healthcare_agent.run
-        return OpenAIAgentsAgent(streamer)
+        return HealthcareAgent()
 
     if framework == "langchain":
         return LangChainDemoAgent()
