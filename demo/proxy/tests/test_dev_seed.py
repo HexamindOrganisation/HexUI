@@ -8,7 +8,6 @@ loop annoying. The seed exists so a developer can log in immediately as
 from __future__ import annotations
 
 from httpx import AsyncClient
-
 from platform_backend.auth.implicit_user import (
     IMPLICIT_USER_EMAIL,
     IMPLICIT_USER_PASSWORD,

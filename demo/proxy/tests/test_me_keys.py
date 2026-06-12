@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from platform_backend.crypto import fernet
 from platform_backend.models.api_key import ApiKey
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ._helpers import signup
 

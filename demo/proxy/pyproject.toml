@@ -38,27 +38,4 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/platform_backend"]
 
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-src = ["src", "tests"]
-extend-exclude = ["alembic/versions"]
-
-[tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "UP",  # pyupgrade
-    "C4",  # flake8-comprehensions
-    "SIM", # flake8-simplify
-]
-ignore = [
-    "E501",  # line too long — formatter handles this
-    "B008",  # FastAPI's `Depends()` in default args is idiomatic
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]  # asserts are the point in tests
+# Ruff config is shared at the repo root (Agent-Package/ruff.toml).

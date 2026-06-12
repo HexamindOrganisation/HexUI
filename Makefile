@@ -42,13 +42,11 @@ test: ## Run the proxy test suite.
 	cd demo/proxy && PYTHONPATH=$(PROXY_PATH) .venv/bin/python -m pytest
 
 # -- lint / format ----------------------------------------------------------
-lint: ## ruff check on both Python packages.
-	cd demo/proxy && .venv/bin/ruff check .
-	cd demo/agent-server && .venv/bin/ruff check .
+lint: ## ruff check across every Python package in the repo (shared ruff.toml).
+	demo/proxy/.venv/bin/ruff check .
 
-format: ## ruff format on both Python packages.
-	cd demo/proxy && .venv/bin/ruff format .
-	cd demo/agent-server && .venv/bin/ruff format .
+format: ## ruff format across every Python package.
+	demo/proxy/.venv/bin/ruff format .
 
 typecheck: ## tsc --noEmit on custom-UI and front-app.
 	cd custom-UI && npm run typecheck

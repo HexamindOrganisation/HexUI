@@ -18,13 +18,12 @@ from collections.abc import AsyncIterator
 import httpx
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from platform_backend import runtime_client
 from platform_backend.models.conversation import Conversation
 from platform_backend.models.message import Message
 from platform_backend.routes import chat as chat_module
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ._helpers import signup
 

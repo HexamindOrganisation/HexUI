@@ -27,13 +27,12 @@ os.environ.setdefault("PLATFORM_FERNET_KEY", Fernet.generate_key().decode())
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from platform_backend import db as db_mod
 from platform_backend.db import Base
 from platform_backend.models import User  # noqa: F401 — registers on metadata
 from platform_backend.server import create_app
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

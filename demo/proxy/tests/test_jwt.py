@@ -11,7 +11,6 @@ import uuid
 
 import jwt as pyjwt
 import pytest
-
 from platform_backend.auth.jwt import (
     InvalidTokenError,
     decode_token,

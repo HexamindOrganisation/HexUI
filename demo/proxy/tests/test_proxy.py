@@ -17,7 +17,6 @@ import json
 import httpx
 import pytest
 from httpx import AsyncClient
-
 from platform_backend import runtime_client
 
 from ._helpers import signup
