@@ -225,6 +225,16 @@ async def post_message(
             "conversation_id": str(conv.id),
             "credentials": creds,
             "files": files_payload,
+            # Caller identity. `role` is an opaque string the developer's
+            # agent can interpret however they like (e.g. opening an
+            # `async with hexgate.User(role=...)` block for policy
+            # enforcement). NEVER includes email, password hash, or any
+            # internal ids beyond the user uuid.
+            "user": {
+                "id": str(user.id),
+                "name": user.name,
+                "role": user.role,
+            },
         },
     }
 

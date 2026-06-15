@@ -58,7 +58,8 @@ previous revision; see those sections at the end.)
   "context": {
     "conversation_id": "uuid",
     "credentials": { "openai_api_key": "sk-...", "anthropic_api_key": "..." },
-    "files": [ { "id": "uuid", "name": "notes.txt", "mime": "text/plain", "size": 123, "content": "…" } ]
+    "files": [ { "id": "uuid", "name": "notes.txt", "mime": "text/plain", "size": 123, "content": "…" } ],
+    "user": { "id": "uuid", "name": "Alice Anderson", "role": "billing" }
   }
 }
 ```
@@ -71,6 +72,12 @@ previous revision; see those sections at the end.)
   turns; forwarded every run). `content` is the decoded text for text mimes,
   `null` for binary (fetch by `id` is post-v1). Inline them into the prompt /
   provider content blocks as your framework needs.
+- `context.user` — caller identity. Always exactly three keys: `id` (the HexUI
+  user uuid), `name` (display name or `null`), and `role` (free-text string or
+  `null`). HexUI does not interpret `role`; it's there so policy-aware runtimes
+  (hexgate, etc.) can scope per-call decisions to the calling user.
+  **NEVER** includes email, password hash, or any internal identifier. An agent
+  backend that doesn't use this can ignore the block.
 
 ### Response — framework-tagged native events
 

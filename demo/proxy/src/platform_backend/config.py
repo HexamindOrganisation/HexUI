@@ -42,12 +42,12 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "info"
-    seed_dev_user: bool = Field(
-        default=True,
+    demo_users_file: str = Field(
+        default="",
         description=(
-            "If true, on startup ensure a known dev account exists "
-            "(email dev01@hexamind.ai, password 'dev'). Set to false in "
-            "production (env PLATFORM_SEED_DEV_USER=false)."
+            "Path to a YAML file describing demo accounts to upsert on "
+            "startup (see `auth/demo_users.py`). Empty = no seeding. "
+            "Env: PLATFORM_DEMO_USERS_FILE."
         ),
     )
 

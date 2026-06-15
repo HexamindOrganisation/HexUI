@@ -143,11 +143,11 @@ Tokens live in `localStorage`. XSS-vulnerable. For a production app, move to htt
 
 ## Prioritized roadmap
 
-The first three items below were done in the recent setup pass — `make setup` builds custom-UI, `make dev` brings everything up, CI runs lint + test + typecheck on every push, and the proxy suite passes 95/95.
+Recent waves landed: `make dev` brings everything up, CI runs lint + test + typecheck on every push, the proxy suite passes ~100/100, login is real JWT auth, and `context.user = {id, name, role}` is wired end-to-end so hexgate-wrapped agents can read the caller's role.
 
 Next up:
 
-1. **Frontend tests.** Vitest for AuthContext / RouteGuard / LoginPage smoke tests, then one Playwright happy-path test.
+1. **Frontend tests.** Vitest for AuthContext / RouteGuard / LoginPage / Settings smoke tests, then one Playwright happy-path test (sign up → set role in Settings → chat with the hexgate-guard agent → verify decision in the hexgate cloud audit log).
 2. **Rename `demo/` → `services/`** — the proxy and agent-server are the real platform, not demos. Pure rename + path updates.
 3. **ESLint + pre-commit hooks** for the JS side; mypy/pyright for the Python side.
 4. **Security blockers** before this goes anywhere near production: rate limit on `/auth/login`, fail-loud check on the default JWT secret, refresh tokens.

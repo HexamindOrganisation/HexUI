@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 
 from .. import runtime_client
-from ..auth.implicit_user import seed_implicit_user
+from ..auth.demo_users import DemoUsersError, load_demo_users
 from ..config import get_settings
 from ..db import Base, dispose_engine, init_engine
 from ..routes import auth as auth_routes
@@ -37,10 +38,17 @@ def create_app() -> FastAPI:
         if engine.url.get_backend_name() == "sqlite":
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-        # Dev convenience: seed a known account so a fresh DB has someone
-        # to log in as. Disable in production via PLATFORM_SEED_DEV_USER=false.
-        if get_settings().seed_dev_user:
-            await seed_implicit_user()
+        # Optional: upsert pre-defined demo accounts from a YAML file so a
+        # fresh DB ships with a handful of users ready to log in (Alice the
+        # billing-role, Bob the support-role, etc.). Opt-in via
+        # PLATFORM_DEMO_USERS_FILE; missing file or env unset = no seeding.
+        demo_path = get_settings().demo_users_file
+        if demo_path:
+            try:
+                await load_demo_users(Path(demo_path))
+            except DemoUsersError as e:
+                logger.error("demo users file rejected: %s", e)
+                raise
         runtime_client.init_client()
         logger.info("platform_backend ready")
         try:

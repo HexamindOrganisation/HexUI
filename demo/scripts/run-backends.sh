@@ -13,6 +13,10 @@ cd "$ROOT"
 export PLATFORM_FERNET_KEY="${PLATFORM_FERNET_KEY:-$(demo/proxy/.venv/bin/python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')}"
 export PLATFORM_DATABASE_URL="${PLATFORM_DATABASE_URL:-sqlite+aiosqlite:////tmp/hexa_dev.sqlite}"
 export PLATFORM_AGENT_BACKEND_URL="http://127.0.0.1:8080"
+# Pre-create the demo users (alice@example.com, bob@example.com, …) on
+# first boot so the demo has populated accounts to log into. Idempotent —
+# rerunning never overwrites existing rows.
+export PLATFORM_DEMO_USERS_FILE="${PLATFORM_DEMO_USERS_FILE:-demo-users.yaml}"
 
 # Stop by PORT, never `pkill -f agent_server` — that pattern matches this very
 # script's command line and would SIGTERM the launcher itself.

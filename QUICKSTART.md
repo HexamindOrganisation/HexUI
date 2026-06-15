@@ -71,7 +71,15 @@ Open <http://localhost:5173>.
 ## What you should see
 
 1. Loading the app redirects you to **/login** (the route guard fires).
-2. Log in as **`dev01@hexamind.ai`** / **`hexademo`** (the dev seed creates this account on first run). Or sign up a new account at **/signup**.
+2. Log in as one of the demo accounts (all share the same password, `hexademo`):
+   - `dev01@hexamind.ai` (admin)
+   - `alice@example.com` (billing)
+   - `bob@example.com` (support)
+   - `carol@example.com` (no role)
+
+   The accounts come from [`demo-users.yaml`](demo-users.yaml), upserted on
+   startup when `PLATFORM_DEMO_USERS_FILE` is set (the `make dev` launcher sets
+   it for you). Or sign up a fresh account at **/signup**.
 3. The chat shell loads with an empty greeting.
 4. Click the agent picker in the top bar and choose **Probe** (or any of the four demo agents).
 5. Type a message and send.

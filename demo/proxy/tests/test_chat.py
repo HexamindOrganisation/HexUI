@@ -164,9 +164,11 @@ async def test_chat_streams_through_and_persists_assistant(
     assert body["input"] == {"messages": [{"role": "user", "content": "say hi"}]}
     assert body["run_id"]
     assert body["context"]["conversation_id"] == cid
-    # Per CONTRACT.md §5 the context payload is `{conversation_id, credentials,
-    # files}` — no user_id (the developer backend shouldn't see auth identity).
-    assert "user_id" not in body["context"]
+    # Per CONTRACT.md §5: caller identity rides in `context.user` and is limited
+    # to {id, name, role} — never email, password_hash, or internal ids.
+    user_block = body["context"]["user"]
+    assert set(user_block.keys()) == {"id", "name", "role"}
+    assert uuid.UUID(user_block["id"])  # well-formed UUID
     assert body["context"]["credentials"] == {}  # no keys configured
 
     # Assistant row exists, content is the concatenated deltas, run_id is set.

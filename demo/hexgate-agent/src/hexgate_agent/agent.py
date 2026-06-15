@@ -1,19 +1,33 @@
-"""The fortify-wrapped agent and its event forwarder.
+"""The hexgate-wrapped agent and its event forwarder.
 
-The interesting part of this backend is *what it forwards*. A fortify agent
-exposes a normalized event stream via ``fortify.stream_agent(...)`` — fortify's
-own unified schema (``run_start`` / ``block_delta`` / ``tool_start`` / ...). We
-do **not** reshape those events into HexaUI's minimal `native` vocabulary; we
-forward them verbatim, tagged ``framework: "fortify"``, and the proxy's
-``FortifyTranslator`` maps them onto the rich internal schema. That round-trip
-is the whole point: it proves the two products' "same events" decision actually
-holds on the wire.
+Two things make this backend interesting:
 
-Wrapping vs. enforcement: ``create_agent`` already returns a ``FortifyAgent``
-(the runtime wrap whose event stream we test here). Policy enforcement is a
-separate fortify concern — add ``agent = agent.enforce_policy("policy.yaml")``
+1. **What it forwards.** A hexgate agent exposes a normalized event stream via
+   ``hexgate.stream_agent(...)`` — hexgate's own unified schema (``run_start`` /
+   ``block_delta`` / ``tool_start`` / ...). We do **not** reshape those events
+   into HexaUI's minimal `native` vocabulary; we forward them verbatim, tagged
+   ``framework: "hexgate"``, and the proxy's ``HexgateTranslator`` maps them
+   onto the rich internal schema. That round-trip is the whole point: it
+   proves the two products' "same events" decision actually holds on the wire.
+
+2. **The user identity it carries.** When the HexUI proxy sends
+   ``context.user = {id, name, role}`` (CONTRACT.md §5), this backend opens an
+   ``async with hexgate.User(user_id=..., role=...)`` block around the run.
+   That ContextVar drives:
+
+   - per-tool policy decisions (``enforce_policy(role, tool, args)``);
+   - per-request biscuit attenuation by ``HexgateClient``;
+   - audit events POSTed to the hexgate cloud, tagged with the HexUI user.
+
+   To see those audit events on the cloud dashboard, set ``HEXGATE_KEY`` in
+   this process's env (it's the dev/admin key — biscuits attenuate per request
+   to scope back down to the HexUI user).
+
+Wrapping vs. enforcement: ``create_agent`` already returns a hexgate-wrapped
+agent (the runtime wrap whose event stream we test here). Policy enforcement is
+a separate hexgate concern — add ``agent = agent.enforce_policy("policy.yaml")``
 (see the SDK's examples/) once you want denials to flow through too; a blocked
-tool surfaces as a fortify ``error`` event, which the translator already
+tool surfaces as a hexgate ``error`` event, which the translator already
 handles.
 """
 
@@ -28,20 +42,20 @@ from typing import Any
 from langchain_core.tools import tool
 
 # CHANGE ME (1/3): the model. Read per-run from the user's forwarded key; falls
-# back to the process env for a standalone `python -m hexa_gate_agent` run.
-_DEFAULT_MODEL = os.getenv("FORTIFY_MODEL", "gpt-4o-mini")
+# back to the process env for a standalone `python -m hexgate_agent` run.
+_DEFAULT_MODEL = os.getenv("HEXGATE_MODEL", "gpt-4o-mini")
 
 # CHANGE ME (2/3): the system prompt. The nudge to call the tool makes the
 # tool_start / tool_end path easy to observe end-to-end.
 SYSTEM_PROMPT = (
-    "You are Fortify Guard, a concise assistant running inside the fortify "
+    "You are Hexgate Guard, a concise assistant running inside the hexgate "
     "secure runtime. When the user asks for the current date or time, call the "
     "get_server_time tool rather than guessing."
 )
 
 
 # CHANGE ME (3/3): your tools. One deterministic tool so a run reliably exercises
-# the tool_start -> tool_end event path through the fortify translator.
+# the tool_start -> tool_end event path through the hexgate translator.
 @tool
 def get_server_time(timezone_name: str = "UTC") -> str:
     """Return the current server time as an ISO-8601 string.
@@ -88,16 +102,16 @@ _agent_cache: dict[tuple[str, str], tuple[Any, Any]] = {}
 
 
 def _get_agent(api_key: str) -> tuple[Any, Any]:
-    """Return a cached (FortifyAgent, handler) for this key, building on miss."""
+    """Return a cached (HexgateAgent, handler) for this key, building on miss."""
     cache_key = (_DEFAULT_MODEL, api_key)
     cached = _agent_cache.get(cache_key)
     if cached is not None:
         return cached
 
-    # Imported lazily: fortify pulls in heavy optional deps at import time, so we
-    # keep module import (and the /agents roster) cheap and pay it only when a
-    # run actually needs the SDK.
-    from fortify import create_agent
+    # Imported lazily: hexgate pulls in heavy optional deps at import time, so
+    # we keep module import (and the /agents roster) cheap and pay it only when
+    # a run actually needs the SDK.
+    from hexgate import create_agent
     from langchain_openai import ChatOpenAI
 
     model = ChatOpenAI(model=_DEFAULT_MODEL, api_key=api_key, temperature=0)
@@ -105,27 +119,27 @@ def _get_agent(api_key: str) -> tuple[Any, Any]:
         model=model,
         tools=[get_server_time],
         system_prompt=SYSTEM_PROMPT,
-        name="fortify-guard",
+        name="hexgate-guard",
     )
     _agent_cache[cache_key] = built
     return built
 
 
-async def run_fortify_agent(
+async def run_hexgate_agent(
     *, input: dict[str, Any], context: dict[str, Any], cancel: asyncio.Event
 ) -> AsyncIterator[dict]:
-    """Stream one run as fortify-native events (JSON-projected dicts).
+    """Stream one run as hexgate-native events (JSON-projected dicts).
 
-    Yields each ``fortify.StreamEvent`` as ``model_dump(mode="json")`` — the
-    exact shape the proxy's FortifyTranslator reads. The caller tags every
-    frame with ``framework: "fortify"``.
+    Yields each ``hexgate.StreamEvent`` as ``model_dump(mode="json")`` — the
+    exact shape the proxy's HexgateTranslator reads. The caller tags every
+    frame with ``framework: "hexgate"``.
     """
     # context.credentials holds the user's decrypted secrets, flat
     # `{provider}_api_key`. Use them only for this run; never persist or log.
     creds = (context or {}).get("credentials") or {}
     api_key = creds.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
     if not api_key:
-        # A fortify-shaped error event — the translator maps it to an error.
+        # A hexgate-shaped error event — the translator maps it to an error.
         yield {
             "event_type": "error",
             "message": (
@@ -138,11 +152,31 @@ async def run_fortify_agent(
     # Built once and cached (see _get_agent); the user's key scopes the cache
     # entry. stream_agent is imported lazily for the same reason as the SDK
     # imports inside _get_agent.
-    from fortify.agents.factory import stream_agent
+    from hexgate import User
+    from hexgate.agents.factory import stream_agent
 
     agent, handler = _get_agent(api_key)
     messages = _messages_with_files(input, context)
-    async for event in stream_agent(agent, handler, {"messages": messages}):
-        if cancel.is_set():
-            return  # stop producing; the proxy persists the partial text
-        yield event.model_dump(mode="json")
+
+    # Bind the run to the HexUI caller's identity. hexgate reads the ContextVar
+    # set by `async with User(...)` for policy decisions, biscuit attenuation,
+    # and audit emission. Missing user block = no scoping (the SDK still runs;
+    # decisions just won't be tagged with a user).
+    caller = (context or {}).get("user") or {}
+    user_id = caller.get("id")
+    role = caller.get("role")
+
+    if user_id is None:
+        # No caller identity — run unscoped. Useful for local "python -m" runs
+        # and for backwards compat with proxies that don't yet send `user`.
+        async for event in stream_agent(agent, handler, {"messages": messages}):
+            if cancel.is_set():
+                return
+            yield event.model_dump(mode="json")
+        return
+
+    async with User(user_id=user_id, role=role):
+        async for event in stream_agent(agent, handler, {"messages": messages}):
+            if cancel.is_set():
+                return  # stop producing; the proxy persists the partial text
+            yield event.model_dump(mode="json")

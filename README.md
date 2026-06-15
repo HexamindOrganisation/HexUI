@@ -73,13 +73,24 @@ make setup        # one-time: Python venvs + custom-UI build + front-app npm ins
 make dev          # backends + frontend together; Ctrl-C tears down both
 ```
 
-Open <http://localhost:5173>. The app redirects to **`/login`**; sign in as
-`dev01@hexamind.ai` / `hexademo` (the dev seed) or sign up a fresh account.
+Open <http://localhost:5173>. The app redirects to **`/login`**. Sign in as
+one of the demo accounts (all share the password `hexademo`):
+
+- `dev01@hexamind.ai` (admin)
+- `alice@example.com` (billing)
+- `bob@example.com` (support)
+- `carol@example.com` (no role)
+
+Or sign up a fresh account at `/signup`. The demo accounts come from
+[`demo-users.yaml`](demo-users.yaml), upserted on startup when
+`PLATFORM_DEMO_USERS_FILE` is set (set by default in `make dev`).
 
 To get real model replies rather than the deterministic echo/canned fallback,
 set your provider key in **Settings** (OpenAI for Probe, Google for Orbit) —
 the proxy forwards it to the agent backend per run, never persisting it in
-plaintext.
+plaintext. The same Settings page has a free-text `role` field; if you point
+HexUI at a `hexgate`-wrapped agent, that role is forwarded to the agent and
+drives hexgate's per-tool policy + audit pipeline.
 
 Run `make help` to see all targets (`test`, `lint`, `typecheck`, …). The full
 guide with troubleshooting and configuration is in [QUICKSTART.md](QUICKSTART.md);
@@ -93,6 +104,7 @@ The bundled agents demonstrate the contract end to end:
 | **Orbit** | `google-adk` (Gemini) | a real LLM **plus** the widget actions + `data_source` workspace |
 | **Atlas** | `langchain` | the LangChain translator (canned native events) |
 | **Forge** | `openai-agents` | the OpenAI Agents translator (canned native events) |
+| **Hexgate Guard** | `hexgate` | a hexgate-wrapped agent that opens `User(user_id, role)` per run and emits audit decisions to the hexgate cloud (separate backend at [`demo/hexgate-agent/`](demo/hexgate-agent/)) |
 
 ---
 

@@ -1,8 +1,10 @@
-import { getJson, postJson } from "./client";
+import { getJson, patchJson, postJson } from "./client";
 
 export interface UserOut {
   id: string;
   email: string;
+  name: string | null;
+  role: string | null;
   created_at: string;
 }
 
@@ -17,6 +19,11 @@ export interface Credentials {
   password: string;
 }
 
+export interface MeUpdate {
+  name?: string | null;
+  role?: string | null;
+}
+
 export function signup(body: Credentials): Promise<TokenOut> {
   return postJson<TokenOut>("/api/auth/signup", body);
 }
@@ -27,4 +34,8 @@ export function login(body: Credentials): Promise<TokenOut> {
 
 export function getMe(): Promise<UserOut> {
   return getJson<UserOut>("/api/me");
+}
+
+export function updateMe(body: MeUpdate): Promise<UserOut> {
+  return patchJson<UserOut>("/api/me", body);
 }

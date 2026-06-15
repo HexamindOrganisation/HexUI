@@ -34,6 +34,8 @@ interface AuthContextValue extends AuthState {
   login: (creds: Credentials) => Promise<void>;
   signup: (creds: Credentials) => Promise<void>;
   logout: () => void;
+  /** Replace the cached user (e.g. after a successful PATCH /me). */
+  setUser: (user: UserOut) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -96,8 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.assign("/login");
   }, []);
 
+  const setUser = useCallback((user: UserOut) => {
+    setState((s) => ({ ...s, user }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, signup, logout }}>
+    <AuthContext.Provider value={{ ...state, login, signup, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -55,7 +55,7 @@ export function Greeting({
   const inputRef = useRef<HTMLInputElement>(null);
   const hasText = text.trim().length > 0;
   const { user } = useAuth();
-  const handle = user?.email.split("@")[0] ?? "there";
+  const handle = user?.name?.trim() || user?.email.split("@")[0] || "there";
 
   const filteredLibrary = useMemo(() => {
     const ql = menuQuery.trim().toLowerCase();
