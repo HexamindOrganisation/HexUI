@@ -42,7 +42,7 @@ export function Sidebar({
   const { agents, agentId, conversationId, conversations } = useActiveAgent();
   const { data: folders = [] } = useFolders();
   const { user } = useAuth();
-  const handle = user?.email.split("@")[0] ?? "";
+  const handle = user?.name?.trim() || user?.email.split("@")[0] || "";
   const initial = handle.charAt(0).toUpperCase() || "?";
 
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());

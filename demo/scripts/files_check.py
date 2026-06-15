@@ -20,7 +20,6 @@ import httpx  # noqa: E402
 from agent_server.server.app import create_app as create_agent  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from platform_backend import runtime_client  # noqa: E402
-from platform_backend.auth.implicit_user import seed_implicit_user  # noqa: E402
 from platform_backend.db import Base, init_engine  # noqa: E402
 from platform_backend.server.app import create_app as create_proxy  # noqa: E402
 
@@ -29,7 +28,6 @@ async def _setup():
     engine = init_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    await seed_implicit_user()
 
 
 asyncio.get_event_loop().run_until_complete(_setup())
@@ -37,6 +35,14 @@ runtime_client.set_client(
     httpx.AsyncClient(transport=httpx.ASGITransport(app=create_agent()), base_url="http://a")
 )
 c = TestClient(create_proxy())
+# Sign up a throwaway test user and pin the bearer token onto the client so
+# every subsequent call is authenticated (the proxy's routes all require auth
+# since the multi-user swap).
+_token = c.post(
+    "/auth/signup",
+    json={"email": "files-check@example.com", "password": "hexademo"},
+).json()["access_token"]
+c.headers["Authorization"] = f"Bearer {_token}"
 fail = []
 
 

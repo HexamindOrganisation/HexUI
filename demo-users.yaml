@@ -1,0 +1,30 @@
+# Demo users for HexUI. Loaded at startup when PLATFORM_DEMO_USERS_FILE
+# points at this file (`make dev` sets that env var by default).
+#
+# Idempotent: existing rows (matched by email) are LEFT ALONE — changing a
+# password here won't overwrite the DB. Wipe /tmp/hexa_dev.sqlite to start
+# fresh.
+#
+# DO NOT commit real credentials here. This file is for local demos with
+# throwaway accounts.
+#
+# `role` is optional and opaque: hexgate-wrapped agents read it via
+# `User(role=...)`. HexUI itself never interprets the string — every team
+# defines their own role vocabulary in their hexgate policy.
+users:
+  - email: dev01@hexamind.ai
+    password: hexademo
+    name: Dev One
+    role: admin
+  - email: alice@example.com
+    password: hexademo
+    name: Alice Anderson
+    role: billing
+  - email: bob@example.com
+    password: hexademo
+    name: Bob Brown
+    role: support
+  - email: carol@example.com
+    password: hexademo
+    name: Carol Carter
+    # role omitted on purpose — exercises the no-role path through to the agent

@@ -23,6 +23,12 @@ class User(Base):
     # one account per email without requiring the citext extension.
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Display name. Optional — falls back to the email's local-part in the UI.
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # Opaque role string forwarded to hexgate-wrapped agents as
+    # `context.user.role`. HexUI never interprets it; each dev team decides
+    # their own role vocabulary.
+    role: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

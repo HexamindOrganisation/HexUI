@@ -1,4 +1,4 @@
-"""Console entrypoint: ``python -m hexa_gate_agent`` (serves on :8080)."""
+"""Console entrypoint: ``python -m hexgate_agent`` (serves on :8080)."""
 
 from __future__ import annotations
 

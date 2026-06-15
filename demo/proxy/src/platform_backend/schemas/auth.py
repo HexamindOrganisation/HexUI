@@ -16,6 +16,8 @@ class Credentials(BaseModel):
 class UserOut(BaseModel):
     id: uuid.UUID
     email: EmailStr
+    name: str | None = None
+    role: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -25,3 +27,12 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class MeUpdate(BaseModel):
+    """Patchable profile fields. Either may be omitted (only the present
+    keys are written); pass `null` to clear a field. Empty strings are
+    coerced to None so a blank text input clears the value."""
+
+    name: str | None = Field(default=None, max_length=120)
+    role: str | None = Field(default=None, max_length=64)

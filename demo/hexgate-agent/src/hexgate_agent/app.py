@@ -1,11 +1,11 @@
-"""The five HexaUI contract endpoints for a fortify-wrapped agent.
+"""The five HexaUI contract endpoints for a hexgate-wrapped agent.
 
 Structurally identical to demo/starter-agent/ — same five endpoints, same SSE
 framing — with two differences:
 
-  1. the agent's ``framework`` is ``"fortify"`` (not ``"native"``), so the proxy
-     selects the ``FortifyTranslator``; and
-  2. ``run_fortify_agent`` yields fortify's *own* normalized events, forwarded
+  1. the agent's ``framework`` is ``"hexgate"`` (not ``"native"``), so the proxy
+     selects the ``HexgateTranslator``; and
+  2. ``run_hexgate_agent`` yields hexgate's *own* normalized events, forwarded
      verbatim. We never reshape them — that's the compatibility being tested.
 
 See CONTRACT.md for the spec; each endpoint is annotated with its section.
@@ -23,20 +23,20 @@ from typing import Any
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 
-from .agent import run_fortify_agent
+from .agent import run_hexgate_agent
 
 _UI_DIR = Path(__file__).parent / "ui"
 
-# §3 — the GET /agents roster. `framework: "fortify"` is the only line that
-# differs from a `native` backend: it points the proxy at FortifyTranslator.
+# §3 — the GET /agents roster. `framework: "hexgate"` is the only line that
+# differs from a `native` backend: it points the proxy at HexgateTranslator.
 AGENTS: list[dict[str, str]] = [
     {
         "id": "guard",
-        "name": "Fortify Guard",
-        "role": "Fortify-wrapped agent",
+        "name": "Hexgate Guard",
+        "role": "Hexgate-wrapped agent",
         "main_color": "#10b981",
         "ui_url": "/agents/guard/ui",
-        "framework": "fortify",
+        "framework": "hexgate",
     },
 ]
 _BY_ID = {a["id"]: a for a in AGENTS}
@@ -77,15 +77,15 @@ async def stream(agent_id: str, body: dict[str, Any], request: Request):
 
     async def event_source() -> AsyncIterator[bytes]:
         try:
-            async for ev in run_fortify_agent(
+            async for ev in run_hexgate_agent(
                 input=input, context=context, cancel=cancel
             ):
                 if cancel.is_set() or await request.is_disconnected():
                     return
-                # Each frame: data: {"framework": "fortify", "event": <fortify event>}
+                # Each frame: data: {"framework": "hexgate", "event": <hexgate event>}
                 frame = {"framework": framework, "event": ev}
                 yield f"data: {json.dumps(frame, separators=(',', ':'))}\n\n".encode()
-        except Exception as e:  # surface failures as a fortify error event
+        except Exception as e:  # surface failures as a hexgate error event
             err = {
                 "framework": framework,
                 "event": {"event_type": "error", "message": str(e)},
@@ -121,7 +121,7 @@ async def invoke_action(
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="HexaUI Fortify Agent", version="0.1.0")
+    app = FastAPI(title="HexaUI Hexgate Agent", version="0.1.0")
     # run_id -> cancel Event. Process-local; a multi-worker deploy needs a
     # shared store. Created here so it exists before any lifespan runs.
     app.state.runs = {}
@@ -129,6 +129,6 @@ def create_app() -> FastAPI:
 
     @app.get("/")
     async def root() -> dict:
-        return {"service": "hexa-gate-agent", "agents": "/agents"}
+        return {"service": "hexgate-agent", "agents": "/agents"}
 
     return app
