@@ -13,7 +13,8 @@ AND the env, and reserves ``delete_resource`` for admin.
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
@@ -22,7 +23,6 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from . import devops_state
-
 
 # ── Tools — stubs from the upstream example; the write tools also update the
 #    shared service state so the UI panel reflects what the model just did. ────

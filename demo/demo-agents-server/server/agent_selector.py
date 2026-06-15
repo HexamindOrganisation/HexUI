@@ -1,6 +1,4 @@
 from ..agents.test_agent import TestAgent
-from ..agents.agent_listing import _BY_ID, AGENTS
-
 
 AGENT_INSTANCES = {}
 

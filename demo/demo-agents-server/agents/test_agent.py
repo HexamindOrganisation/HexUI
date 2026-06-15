@@ -2,6 +2,7 @@ import asyncio
 
 from .base import AgentBase
 
+
 class TestAgent(AgentBase):
     async def run(self, request):
         for i in range(5):
