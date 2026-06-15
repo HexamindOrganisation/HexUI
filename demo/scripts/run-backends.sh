@@ -27,6 +27,15 @@ trap cleanup EXIT INT TERM
 # LLMAgent when an openai_api_key is forwarded (else it falls back to echo).
 export AGENT_ENABLE_LLM="${AGENT_ENABLE_LLM:-0}"
 
+# Export agent-server secrets (OPENAI_API_KEY, HEXGATE_KEY). Agents read
+# OPENAI_API_KEY from the env first and fall back to the Settings UI key, so
+# .env is the reliable default — no frontend key needed.
+if [ -f demo/agent-server/.env ]; then
+  set -o allexport
+  . demo/agent-server/.env
+  set +o allexport
+fi
+
 echo "starting agent-server :8880 (AGENT_ENABLE_LLM=$AGENT_ENABLE_LLM) …"
 PYTHONPATH=demo/agent-server/src \
   demo/agent-server/.venv/bin/python -m agent_server &
