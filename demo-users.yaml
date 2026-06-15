@@ -16,6 +16,13 @@
 #
 # Password is `hexademo` for everyone (min length is 8).
 users:
+
+  # ── No role ── exercises the fail-closed `default` (deny) path on both agents
+  - email: guest@example.com
+    password: hexademo
+    name: Sam Guest
+    # role omitted on purpose
+
   # ── DevOps agent ── roles: viewer < operator < admin (devops_policy.yaml)
   - email: vince@hexamind.ai
     password: hexademo
@@ -44,8 +51,3 @@ users:
     name: Bianca              # billing/claims lookups only; clinical data walled off
     role: billing_staff
 
-  # ── No role ── exercises the fail-closed `default` (deny) path on both agents
-  - email: guest@example.com
-    password: hexademo
-    name: Sam Guest
-    # role omitted on purpose
