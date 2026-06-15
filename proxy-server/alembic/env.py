@@ -53,7 +53,14 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    # SQLite can't ALTER/DROP columns in place; batch mode rewrites the table so
+    # the same migrations run on both SQLite (dev) and Postgres.
+    render_as_batch = connection.dialect.name == "sqlite"
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_as_batch=render_as_batch,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
