@@ -22,14 +22,17 @@ command -v npm >/dev/null 2>&1 || {
 }
 
 echo "→ proxy venv  (proxy-server/.venv)"
-[ -d proxy-server/.venv ] || uv venv proxy-server/.venv
+# Guard on the interpreter, not just the dir — a half-built/broken venv (dir
+# present but no bin/python) must be (re)created, or `uv pip install` below
+# fails with "No virtual environment found for directory".
+[ -x proxy-server/.venv/bin/python ] || uv venv proxy-server/.venv
 # hexa-events is a local path dep of the proxy — install it editable first so
 # the proxy's dependency resolves without hitting PyPI.
 uv pip install --python proxy-server/.venv -e packages/hexa-events
 uv pip install --python proxy-server/.venv -e 'proxy-server[dev]'
 
 echo "→ agent-server venv  (demo/agent-server/.venv)"
-[ -d demo/agent-server/.venv ] || uv venv demo/agent-server/.venv
+[ -x demo/agent-server/.venv/bin/python ] || uv venv demo/agent-server/.venv
 # [llm] pulls openai (Probe) + google-genai (Orbit) for real model replies.
 uv pip install --python demo/agent-server/.venv -e 'demo/agent-server[dev,llm]'
 
