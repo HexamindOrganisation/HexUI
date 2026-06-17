@@ -9,6 +9,8 @@ local audit trail (UC-10); the tools enforce state/ownership. Process-global, li
 
 from __future__ import annotations
 
+import csv
+import io
 import sqlite3
 from typing import Any
 
@@ -233,3 +235,32 @@ def set_state(number: str, new_state: str) -> dict[str, Any]:
     updated = get_change(number)
     assert updated is not None
     return updated
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle board (UI widget). Global view, no per-user scope — see ui/itsm.yaml.
+# ---------------------------------------------------------------------------
+
+STATES = ["new", "Assess", "Authorize", "Schedule"]
+
+
+def state_counts() -> dict[str, int]:
+    """Per-state change counts — the funnel the metrics widget shows."""
+    counts = dict.fromkeys(STATES, 0)
+    for change in all_changes():
+        if change["state"] in counts:
+            counts[change["state"]] += 1
+    return counts
+
+
+def board_csv() -> str:
+    """Every change as CSV for the board table."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Change", "State", "CI", "Description", "Requester", "Implementer"])
+    for c in all_changes():
+        writer.writerow([
+            c["number"], c["state"], c["ci"] or "—", c["short_description"],
+            c["requester_name"] or "—", c["implementer_name"] or "—",
+        ])
+    return buf.getvalue()
