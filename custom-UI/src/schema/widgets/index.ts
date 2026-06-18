@@ -9,6 +9,12 @@ export {
   type ButtonSize,
 } from "./button-group.js";
 export {
+  DropdownWidgetSchema,
+  type DropdownWidget,
+  DropdownOptionSchema,
+  type DropdownOption,
+} from "./dropdown.js";
+export {
   PageHeaderWidgetSchema,
   type PageHeaderWidget,
 } from "./page-header.js";
@@ -55,6 +61,7 @@ export {
 } from "./tool-calls.js";
 
 import { ButtonGroupWidgetSchema } from "./button-group.js";
+import { DropdownWidgetSchema } from "./dropdown.js";
 import { PageHeaderWidgetSchema } from "./page-header.js";
 import { PageFooterWidgetSchema } from "./page-footer.js";
 import { AiChatInputWidgetSchema } from "./ai-chat-input.js";
@@ -67,6 +74,7 @@ import { TableWidgetSchema } from "./table.js";
 import { ToolCallsWidgetSchema } from "./tool-calls.js";
 import type {
   ButtonGroupWidget,
+  DropdownWidget,
   PageHeaderWidget,
   PageFooterWidget,
   AiChatInputWidget,
@@ -81,6 +89,7 @@ import type {
 
 export const BuiltinWidgetSchemas = {
   "button-group": ButtonGroupWidgetSchema,
+  dropdown: DropdownWidgetSchema,
   "page-header": PageHeaderWidgetSchema,
   "page-footer": PageFooterWidgetSchema,
   "ai-chat-input": AiChatInputWidgetSchema,
@@ -99,6 +108,7 @@ export type BuiltinWidgetType = keyof typeof BuiltinWidgetSchemas;
 export const BuiltinWidgetUnion = {
   oneOf: [
     ButtonGroupWidgetSchema,
+    DropdownWidgetSchema,
     PageHeaderWidgetSchema,
     PageFooterWidgetSchema,
     AiChatInputWidgetSchema,
@@ -114,6 +124,7 @@ export const BuiltinWidgetUnion = {
 
 export type BuiltinWidget =
   | ButtonGroupWidget
+  | DropdownWidget
   | PageHeaderWidget
   | PageFooterWidget
   | AiChatInputWidget

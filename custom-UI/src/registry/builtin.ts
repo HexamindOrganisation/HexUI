@@ -2,6 +2,8 @@ import { defineWidget } from "./register.js";
 import {
   ButtonGroupWidgetSchema,
   type ButtonGroupWidget,
+  DropdownWidgetSchema,
+  type DropdownWidget,
   PageHeaderWidgetSchema,
   type PageHeaderWidget,
   PageFooterWidgetSchema,
@@ -24,6 +26,7 @@ import {
   type ToolCallsWidget,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
+import { DropdownWidgetComponent } from "../widgets/dropdown.js";
 import { PageHeaderWidgetComponent } from "../widgets/page-header.js";
 import { PageFooterWidgetComponent } from "../widgets/page-footer.js";
 import { AiChatInputWidgetComponent } from "../widgets/ai-chat-input.js";
@@ -41,6 +44,11 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     type: "button-group",
     schema: ButtonGroupWidgetSchema,
     component: ButtonGroupWidgetComponent,
+  }),
+  defineWidget<DropdownWidget>({
+    type: "dropdown",
+    schema: DropdownWidgetSchema,
+    component: DropdownWidgetComponent,
   }),
   defineWidget<PageHeaderWidget>({
     type: "page-header",
