@@ -31,6 +31,16 @@ native event (`{"type":"ui","widget":"<name>","ui":"<yaml>"}`) on its run
 stream. The proxy routes it to the named `llm-ui-response` widget, which
 compiles and renders it (inheriting the agent's theme).
 
+### Reference consumer
+
+The **Canvas** agent in
+[`demo/agent-server`](../demo/agent-server/src/agent_server/agents/canvas.py) is
+a working MCP client: it launches this server over stdio, exposes the four tools
+to a real OpenAI model, runs the loop above over a fake dataset, and emits the
+document `validate_ui` accepted. Enable with `AGENT_ENABLE_LLM=1` +
+`OPENAI_API_KEY` (and build this package first); it falls back to a static UI
+otherwise.
+
 ## Why it can't drift
 
 All catalog and validation logic comes from the `agent-ui/llm` entrypoint —

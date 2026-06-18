@@ -11,7 +11,8 @@ dependencies = [
 
 [project.optional-dependencies]
 llm = [
-    "openai>=1.40",            # Probe (native)
+    "openai>=1.40",            # Probe (native), Canvas (MCP-client UI authoring)
+    "mcp>=1.0",                # Canvas: MCP client for the ui-generator server
     "google-genai>=1.0",       # Orbit (google-adk / Gemini)
     "openai-agents>=0.0.10",   # Healthcare (openai-agents SDK)
     "google-adk>=1.0",         # DevOps (google-adk runtime)
