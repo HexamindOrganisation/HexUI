@@ -92,6 +92,29 @@ export function DropdownWidgetComponent({
     [props.options, dispatcher, requestRefresh],
   );
 
+  // Optionally assert the initial option to the backend on mount, so the
+  // widgets it drives (e.g. a table) show the first option's data from the
+  // start — and the shown selection matches the backend state even if it has
+  // drifted. The `refresh` runs in the promise's `.then`, by which point the
+  // sibling widgets have mounted + subscribed, so it reliably reaches them.
+  const didMountFire = useRef(false);
+  useEffect(() => {
+    if (!props.select_on_mount || didMountFire.current) return;
+    didMountFire.current = true;
+    const opt = props.options.find((o) => o.value === initial) ?? props.options[0];
+    if (!opt) return;
+    dispatcher
+      .invoke(opt.action, opt.args)
+      .then(() => {
+        if (opt.refresh?.length) requestRefresh(opt.refresh);
+      })
+      .catch(() => {
+        /* action errors surface via the backend / diagnostics */
+      });
+    // Mount-only; deps intentionally omitted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const portalTarget =
     (triggerRef.current?.closest(".au-root") as HTMLElement | null) ??
     (typeof document !== "undefined" ? document.body : null);

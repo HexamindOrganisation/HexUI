@@ -38,6 +38,12 @@ export const DropdownWidgetSchema = {
      * Defaults to the first option.
      */
     default: { type: "string" },
+    /**
+     * Fire the initial option's `action` once on mount (and re-pull its
+     * `refresh` widgets), so the widgets it drives show the first option's data
+     * from the start — even if the backend's selection has drifted. Default false.
+     */
+    select_on_mount: { type: "boolean" },
     /** Optional inline label rendered before the select. */
     label: { type: "string" },
     /** Optional disabled placeholder row. */

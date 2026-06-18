@@ -17,6 +17,7 @@ widgets:
     size: { width: 12, height: auto }
     label: "Environment"
     default: dev
+    select_on_mount: true   # assert "dev" on load so the table shows it from the start
     options:
       - { label: "Dev",     value: dev,     action: select_env, args: { env: dev },     refresh: [service-metrics, service-table] }
       - { label: "Staging", value: staging, action: select_env, args: { env: staging }, refresh: [service-metrics, service-table] }

@@ -169,9 +169,10 @@ widget's `data_source` content** (e.g. an env picker driving a table).
   type: "dropdown"
   position: { horizontal: "left", vertical: "high" }
   size: { width: 12, height: "auto" }
-  label: "Environment"     # optional; inline label before the select
-  default: "dev"           # optional; the option shown selected initially (defaults to the first)
-  placeholder: "Choose…"   # optional; a disabled first row
+  label: "Environment"      # optional; inline label before the select
+  default: "dev"            # optional; the option shown selected initially (defaults to the first)
+  select_on_mount: true     # optional; fire the initial option's action on load (default false)
+  placeholder: "Choose…"    # optional; a disabled first row
   options:                 # required; at least 1
     - { label: "Dev",     value: "dev",     action: "select_env", args: { env: "dev" },     refresh: ["service-table"] }
     - { label: "Staging", value: "staging", action: "select_env", args: { env: "staging" }, refresh: ["service-table"] }
@@ -185,6 +186,10 @@ widgets named in `option.refresh` re-pull their `data_source`. The selected
 value is local UI state — the **backend stays the source of truth** (the action
 sets server-side state; the refreshed widget reads it back). Set `default` to
 mirror your backend's initial selection so the bound widget's first pull matches.
+
+Set `select_on_mount: true` to fire the initial option's action once on load —
+so the widgets it drives (e.g. a table) show the first option's data from the
+start, even if the backend's selection has drifted from a previous session.
 
 ---
 

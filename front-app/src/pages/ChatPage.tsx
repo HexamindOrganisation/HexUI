@@ -94,7 +94,7 @@ export function ChatPage() {
   );
 
   const dispatcher = useMemo(
-    () => makeDispatcher(liveConversationId),
+    () => makeDispatcher(liveConversationId, () => agentRef.current),
     [agentId, conversationId, sessionNonce],
   );
 
