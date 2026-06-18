@@ -131,6 +131,13 @@ export type RuntimeEvent =
       widget?: string | null;
     })
   | (BaseStreamEvent & {
+      event_type: "ui";
+      // Target widget name (an `llm-ui-response` widget in the layout).
+      widget: string;
+      // The agent-authored UI document: YAML text or an already-parsed config.
+      ui: unknown;
+    })
+  | (BaseStreamEvent & {
       event_type: "run_end";
       result: AgentRunResult;
       output: unknown;

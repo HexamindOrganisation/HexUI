@@ -40,6 +40,7 @@ from .events import (
     ToolCallStep,
     ToolEndEvent,
     ToolStartEvent,
+    UiEvent,
 )
 
 
@@ -296,6 +297,19 @@ class RunEmitter:
                 widget=widget,
             )
         ]
+
+    # -- agent-authored UI --------------------------------------------------
+
+    def ui(self, *, widget: str, ui: Any) -> list[StreamEvent]:
+        """Emit an agent-authored UI document targeted at a display widget.
+
+        Any in-progress streamed text is finalized first so transcript order
+        stays text → ui → text. ``ui`` is YAML text (or a parsed config object);
+        the frontend routes it to ``widget``'s inbox to be compiled + rendered.
+        """
+        out = self.close_open_blocks()
+        out.append(UiEvent(**self._node(), widget=widget, ui=ui))
+        return out
 
     # -- errors -------------------------------------------------------------
 

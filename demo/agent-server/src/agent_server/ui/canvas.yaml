@@ -1,0 +1,28 @@
+# Canvas — agent-authored UI showcase. Served by GET /agents/canvas/ui.
+# The transcript carries the agent's prose; the `answer-ui` widget renders the
+# display-only UI the agent composes at runtime (a `ui` event targets it).
+page:
+  layout_type: grid
+  main_color: "#7c3aed"
+
+widgets:
+  - name: transcript
+    type: ai-response
+    position: { horizontal: left, vertical: high }
+    size: { width: 12, height: 220 }
+    empty_text: "Ask Canvas to summarize something."
+    thinking_indicator: dots
+
+  - name: answer-ui
+    type: llm-ui-response
+    position: { horizontal: left, vertical: middle }
+    size: { width: 12, height: 620 }
+    title: Generated view
+    empty_text: "The agent's generated UI will appear here."
+
+  - name: chat-input
+    type: ai-chat-input
+    position: { horizontal: left, vertical: low }
+    size: { width: 12, height: auto }
+    placeholder: "Ask Canvas…"
+    rows: 2

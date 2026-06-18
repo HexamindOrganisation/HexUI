@@ -8,6 +8,7 @@ unsupported frameworks.
     {"type": "reasoning",   "text": "..."}
     {"type": "tool",        "id": "t1", "name": "search", "args": {...}, "widget": "..."}
     {"type": "tool_result", "id": "t1", "output": {...} | "error": "..."}
+    {"type": "ui",          "widget": "answer-ui", "ui": "<validated UI YAML>"}
     {"type": "error",       "message": "..."}
     {"type": "done"}                            (handled by the chat route)
 """
@@ -66,6 +67,14 @@ class NativeTranslator(BaseTranslator):
                 error=event.get("error"),
                 widget=widget,
             )
+
+        if etype == "ui":
+            widget = event.get("widget")
+            if not widget:
+                return emitter.error(
+                    "native 'ui' event is missing a 'widget' target"
+                )
+            return emitter.ui(widget=widget, ui=event.get("ui"))
 
         if etype == "error":
             return emitter.error(event.get("message", "") or "")

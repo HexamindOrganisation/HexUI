@@ -29,6 +29,7 @@ from .events import (
     ToolEndEvent,
     ToolStartEvent,
     ToolUpdateEvent,
+    UiEvent,
 )
 from .run_emitter import RunEmitter, extract_query, summarize_output
 from .sse import to_sse_frame
@@ -55,6 +56,7 @@ __all__ = [
     "ToolStartEvent",
     "ToolUpdateEvent",
     "ToolEndEvent",
+    "UiEvent",
     "RunEndEvent",
     "ErrorEvent",
     "StreamEvent",

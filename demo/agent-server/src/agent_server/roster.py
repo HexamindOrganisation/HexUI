@@ -30,6 +30,14 @@ AGENTS: list[dict[str, str]] = [
         "framework": "native",
     },
     {
+        "id": "canvas",
+        "name": "Canvas",
+        "role": "Agent-authored UI",
+        "main_color": "#7c3aed",
+        "ui_url": "/agents/canvas/ui",
+        "framework": "native",
+    },
+    {
         "id": "atlas",
         "name": "Atlas",
         "role": "Operations copilot",

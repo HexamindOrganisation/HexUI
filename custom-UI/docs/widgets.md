@@ -26,6 +26,9 @@ custom widgets, see [extending.md](./extending.md).
 | `metrics`        | Strip of stat cards from a data source | no       | main   |
 | `table`          | Scrollable CSV table (head/tail rows)  | no         | main   |
 | `tool-calls`     | Live log of agent tool invocations     | no         | main   |
+| `chart`          | Bar/line/area/scatter/pie (recharts)   | no         | main   |
+| `container`      | Decorative titled panel (esthetic)     | yes        | main   |
+| `llm-ui-response`| Renders agent-authored display-only UI | yes        | main   |
 
 **Chromeless** widgets opt out of the default `<div class="au-widget-host">`
 border/padding so they sit flush with the page edges.
@@ -714,6 +717,94 @@ human-readable transcript. Routing tool events to their own widget keeps
 the chat focused on user/assistant text and lets the UI grow a richer
 tool view (status indicators, JSON pretty-print, expand/collapse)
 without bloating `ai-response`.
+
+---
+
+## `chart`
+
+A bar / line / area / scatter / pie chart, rendered with
+[recharts](https://recharts.org). Data is an inline array of flat row objects
+(or fetched via `data_source`); each `series` reads its `key` from every row and
+`x_key` names the category / x-axis field.
+
+### YAML
+
+```yaml
+- name: "rev"
+  type: "chart"
+  size: { width: 7, height: 280 }
+  chart_type: "bar"            # bar | line | area | scatter | pie
+  title: "Revenue by region"
+  x_key: "region"
+  series:
+    - { key: "revenue", label: "Revenue" }   # color optional; defaults to the accent palette
+  data:
+    - { region: "EMEA", revenue: 1200 }
+    - { region: "AMER", revenue: 1800 }
+  stacked: false               # bar/area only
+  show_legend: true            # defaults to true when >1 series
+  show_grid: true
+```
+
+### Fields
+
+| Field | Type | Notes |
+|---|---|---|
+| `chart_type` | enum | `bar` `line` `area` `scatter` `pie`. Required. |
+| `x_key` | string | Category/x field (pie: the slice label key). Required. |
+| `series` | object[] | `{ key, label?, color? }`. ≥1. Pie uses the first series' `key` as the value. |
+| `data` | object[] | Inline rows. Ignored when `data_source` is set. |
+| `data_source` | data_source | Action returning the same row array. |
+| `stacked` / `show_legend` / `show_grid` | boolean | Display toggles. |
+
+Colors come from the page accent + a tuned categorical palette unless a series
+sets an explicit `color`.
+
+---
+
+## `container`
+
+A purely decorative titled panel — a tinted/bordered box with an optional short
+body. Use it to group or annotate a region of a layout. It does **not** nest
+other widgets; grouping is visual (place siblings near it in the grid).
+
+### YAML
+
+```yaml
+- name: "takeaway"
+  type: "container"
+  size: { width: 5, height: 280 }
+  tone: "accent"               # default | muted | card | accent | outline
+  align: "left"                # left | center | right
+  title: "Takeaway"
+  body: "AMER leads; APAC is the growth opportunity."
+```
+
+---
+
+## `llm-ui-response`
+
+Host widget for **agent-authored UI**. It renders nothing of its own; it
+receives a validated, display-only UI document at runtime (a `ui` event routed
+to it by name) and compiles + renders it *inside itself*, inheriting the host
+page theme. See [CONTRACT.md](../../CONTRACT.md) (the `ui` event) and the
+[UI-generator MCP](../../UI-generator-mcp/) the agent uses to author + validate
+the document.
+
+### YAML
+
+```yaml
+- name: "answer-ui"
+  type: "llm-ui-response"
+  size: { width: 12, height: 620 }
+  title: "Generated view"
+  empty_text: "The agent's generated UI will appear here."
+```
+
+The document the agent emits uses this same YAML dialect, restricted to the
+display elements (`page-header`, `page-footer`, `container`, `markdown`,
+`table`, `metrics`, `chart`, `spacer`) — no interactions, no theme. The widget
+reads the latest UI from its inbox; a new emission replaces what's shown.
 
 ---
 

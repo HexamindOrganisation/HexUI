@@ -14,6 +14,7 @@ Event vocabulary (the `type` field):
                             "args": {...}, "widget": "tool-calls"}  (args, widget optional)
     {"type": "tool_result", "id": "t1", "output": {...}}          a tool call ends
     {"type": "tool_result", "id": "t1", "error": "..."}             (output OR error)
+    {"type": "ui",          "widget": "answer-ui", "ui": "<yaml>"} render generated UI
     {"type": "error",       "message": "..."}                     the run failed
     {"type": "done"}                                              optional; EOF also ends
 
@@ -54,6 +55,17 @@ def tool_result(id: str, output: Any = None, error: str | None = None) -> dict:
     else:
         ev["output"] = output
     return ev
+
+
+def ui(widget: str, ui: Any) -> dict:
+    """Render an agent-authored, display-only UI document inside ``widget``.
+
+    ``widget`` names an ``llm-ui-response`` widget in the agent's ``ui.yaml``;
+    ``ui`` is the UI document as YAML text (or a parsed config dict). Validate it
+    with the UI-generator MCP before emitting — a clean ``validate_ui`` means the
+    widget will render it.
+    """
+    return {"type": "ui", "widget": widget, "ui": ui}
 
 
 def error(message: str) -> dict:

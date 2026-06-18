@@ -1,6 +1,10 @@
 // Primary mount
 export { AgentUI, type AgentUIProps } from "./components/AgentUI.js";
 
+// Embed an already-compiled plan without a second provider/root (used to
+// render nested, agent-authored UI inside a widget).
+export { RenderPlanView } from "./components/RenderPlanView.js";
+
 // Command-palette attach (composer "variation B") — reusable by host shells.
 export { AttachPalette, type PaletteFile } from "./lib/attach-palette.js";
 
@@ -27,6 +31,15 @@ export {
   defineWidget,
   WidgetRegistry,
   builtinWidgets,
+  llmDisplayWidgets,
+  llmDisplayRegistry,
+  llmDisplaySchemas,
+  restrictSchema,
+  LLM_DISPLAY_TYPES,
+  LLM_FORBIDDEN_FIELDS,
+  LLM_ELEMENT_META,
+  type LlmDisplayType,
+  type LlmElementMeta,
   type WidgetDefinition,
   type AnyWidgetDefinition,
   type WidgetProps,

@@ -36,6 +36,12 @@ def select_agent(agent_id: str, context: dict[str, Any]) -> Agent:
 
         return DevopsAgent()
 
+    # Canvas: deterministic showcase of agent-authored UI (emits a `ui` event).
+    if agent_id == "canvas":
+        from .canvas import CanvasAgent
+
+        return CanvasAgent()
+
     if framework == "langchain":
         return LangChainDemoAgent()
     if framework == "openai-agents":

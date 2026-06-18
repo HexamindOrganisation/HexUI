@@ -62,6 +62,7 @@ export interface BridgeHooks {
  *   block_end    (text)         →   message (assistant, accumulated)
  *   tool_start                  →   tool-call (event.widget or default, phase: start)
  *   tool_end                    →   tool-call (event.widget or default, phase: end)
+ *   ui                          →   tool-call (event.widget, payload: { ui })
  *   run_end                     →   status: idle  (in finally)
  *   error  (details.cancelled)  →   message (system, "Run cancelled.")
  *   error  (everything else)    →   error
@@ -318,6 +319,18 @@ export class RuntimeBridge implements AgentBridge {
           kind: "tool-call",
           ...(event.widget ? { widget: event.widget } : {}),
           payload,
+        });
+        return;
+      }
+
+      case "ui": {
+        // Agent-authored UI for a named llm-ui-response widget. Route it
+        // through the widget inbox (the same channel as tool-calls) carrying
+        // the raw UI document; the widget compiles + renders it.
+        this.emit({
+          kind: "tool-call",
+          widget: event.widget,
+          payload: { ui: event.ui },
         });
         return;
       }

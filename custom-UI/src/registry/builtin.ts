@@ -22,6 +22,12 @@ import {
   type TableWidget,
   ToolCallsWidgetSchema,
   type ToolCallsWidget,
+  ChartWidgetSchema,
+  type ChartWidget,
+  ContainerWidgetSchema,
+  type ContainerWidget,
+  LlmUiResponseWidgetSchema,
+  type LlmUiResponseWidget,
 } from "../schema/widgets/index.js";
 import { ButtonGroupWidgetComponent } from "../widgets/button-group.js";
 import { PageHeaderWidgetComponent } from "../widgets/page-header.js";
@@ -34,6 +40,9 @@ import { FormWidgetComponent } from "../widgets/form.js";
 import { MetricsWidgetComponent } from "../widgets/metrics.js";
 import { TableWidgetComponent } from "../widgets/table.js";
 import { ToolCallsWidgetComponent } from "../widgets/tool-calls.js";
+import { ChartWidgetComponent } from "../widgets/chart.js";
+import { ContainerWidgetComponent } from "../widgets/container.js";
+import { LlmUiResponseWidgetComponent } from "../widgets/llm-ui-response.js";
 import type { AnyWidgetDefinition } from "./types.js";
 
 export const builtinWidgets: AnyWidgetDefinition[] = [
@@ -100,5 +109,22 @@ export const builtinWidgets: AnyWidgetDefinition[] = [
     type: "tool-calls",
     schema: ToolCallsWidgetSchema,
     component: ToolCallsWidgetComponent,
+  }),
+  defineWidget<ChartWidget>({
+    type: "chart",
+    schema: ChartWidgetSchema,
+    component: ChartWidgetComponent,
+  }),
+  defineWidget<ContainerWidget>({
+    type: "container",
+    schema: ContainerWidgetSchema,
+    component: ContainerWidgetComponent,
+    chromeless: true,
+  }),
+  defineWidget<LlmUiResponseWidget>({
+    type: "llm-ui-response",
+    schema: LlmUiResponseWidgetSchema,
+    component: LlmUiResponseWidgetComponent,
+    chromeless: true,
   }),
 ];

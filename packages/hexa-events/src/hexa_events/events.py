@@ -56,6 +56,7 @@ class EventType(StrEnum):
     TOOL_START = "tool_start"
     TOOL_UPDATE = "tool_update"
     TOOL_END = "tool_end"
+    UI = "ui"
     RUN_END = "run_end"
     ERROR = "error"
 
@@ -235,6 +236,23 @@ class ToolEndEvent(BaseStreamEvent):
     widget: str | None = None
 
 
+class UiEvent(BaseStreamEvent):
+    """Agent-authored UI routed to a named display widget.
+
+    Additive, display-only counterpart to the tool events: the agent has
+    composed a small UI document (validated by the UI-generator MCP) and wants
+    it rendered inside an ``llm-ui-response`` widget. ``widget`` names the target
+    widget; ``ui`` is the UI document as YAML text (or an already-parsed config
+    object). The frontend routes it to that widget's inbox, where it is compiled
+    and rendered. Unlike ``tool_*`` events, this is purely presentational — it
+    carries no execution semantics.
+    """
+
+    event_type: Literal[EventType.UI] = EventType.UI
+    widget: str
+    ui: Any
+
+
 class RunEndEvent(BaseStreamEvent):
     """Signal that a run has completed with a final result."""
 
@@ -265,6 +283,7 @@ StreamEvent = Annotated[
     | ToolStartEvent
     | ToolUpdateEvent
     | ToolEndEvent
+    | UiEvent
     | RunEndEvent
     | ErrorEvent,
     Field(discriminator="event_type"),

@@ -199,8 +199,22 @@ emits exactly these):
 {"type":"text","text":"..."}            {"type":"reasoning","text":"..."}
 {"type":"tool","id":"t1","name":"search","args":{...},"widget":"tool-calls"}
 {"type":"tool_result","id":"t1","output":{...}|"error":"..."}
+{"type":"ui","widget":"answer-ui","ui":"<display-only UI YAML>"}
 {"type":"error","message":"..."}        {"type":"done"}
 ```
+
+**The `ui` event — agent-authored UI.** Beyond text and tool calls, an agent can
+emit a small **display-only** UI document and have it rendered inside an
+`llm-ui-response` widget. `widget` names that widget (in your `ui.yaml`); `ui` is
+the document as YAML text (the `custom-UI` dialect restricted to display
+elements: `page-header`, `page-footer`, `container`, `markdown`, `table`,
+`metrics`, `chart`, `spacer`). It is presentational only — no actions, data
+sources, or interactions. Author and validate it with the **UI-generator MCP**
+([`UI-generator-mcp/`](UI-generator-mcp/)) before emitting; a clean `validate_ui`
+guarantees the widget will render it. Like tool events, this rides the run
+stream and is live for the turn (not replayed on reload). The other supported
+frameworks don't have a native equivalent — emit a `ui` event via the `native`
+path alongside your framework's stream, or forward it as a `native` frame.
 
 **Serializing native events.** Framework events aren't always plain JSON (e.g.
 LangChain chunks are `AIMessageChunk` objects). Your server layer JSON-projects

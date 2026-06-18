@@ -53,6 +53,24 @@ export {
   type ToolCallStartPayload,
   type ToolCallEndPayload,
 } from "./tool-calls.js";
+export {
+  ChartWidgetSchema,
+  type ChartWidget,
+  ChartKindSchema,
+  type ChartKind,
+  ChartSeriesSchema,
+  type ChartSeries,
+} from "./chart.js";
+export {
+  ContainerWidgetSchema,
+  type ContainerWidget,
+  ContainerToneSchema,
+  type ContainerTone,
+} from "./container.js";
+export {
+  LlmUiResponseWidgetSchema,
+  type LlmUiResponseWidget,
+} from "./llm-ui-response.js";
 
 import { ButtonGroupWidgetSchema } from "./button-group.js";
 import { PageHeaderWidgetSchema } from "./page-header.js";
@@ -65,6 +83,9 @@ import { FormWidgetSchema } from "./form.js";
 import { MetricsWidgetSchema } from "./metrics.js";
 import { TableWidgetSchema } from "./table.js";
 import { ToolCallsWidgetSchema } from "./tool-calls.js";
+import { ChartWidgetSchema } from "./chart.js";
+import { ContainerWidgetSchema } from "./container.js";
+import { LlmUiResponseWidgetSchema } from "./llm-ui-response.js";
 import type {
   ButtonGroupWidget,
   PageHeaderWidget,
@@ -77,6 +98,9 @@ import type {
   MetricsWidget,
   TableWidget,
   ToolCallsWidget,
+  ChartWidget,
+  ContainerWidget,
+  LlmUiResponseWidget,
 } from "./index.js";
 
 export const BuiltinWidgetSchemas = {
@@ -91,6 +115,9 @@ export const BuiltinWidgetSchemas = {
   metrics: MetricsWidgetSchema,
   table: TableWidgetSchema,
   "tool-calls": ToolCallsWidgetSchema,
+  chart: ChartWidgetSchema,
+  container: ContainerWidgetSchema,
+  "llm-ui-response": LlmUiResponseWidgetSchema,
 } as const;
 
 export type BuiltinWidgetType = keyof typeof BuiltinWidgetSchemas;
@@ -109,6 +136,9 @@ export const BuiltinWidgetUnion = {
     MetricsWidgetSchema,
     TableWidgetSchema,
     ToolCallsWidgetSchema,
+    ChartWidgetSchema,
+    ContainerWidgetSchema,
+    LlmUiResponseWidgetSchema,
   ],
 } as const;
 
@@ -123,4 +153,7 @@ export type BuiltinWidget =
   | FormWidget
   | MetricsWidget
   | TableWidget
-  | ToolCallsWidget;
+  | ToolCallsWidget
+  | ChartWidget
+  | ContainerWidget
+  | LlmUiResponseWidget;

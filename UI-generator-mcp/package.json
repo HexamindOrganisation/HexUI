@@ -1,0 +1,29 @@
+{
+  "name": "ui-generator-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that lets an agent author display-only HexUI inside an llm-ui-response widget",
+  "type": "module",
+  "bin": {
+    "ui-generator-mcp": "./dist/server.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "agent-ui": "file:../custom-UI",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "license": "MIT"
+}

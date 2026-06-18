@@ -38,6 +38,7 @@ NATIVE_EVENT_TYPES = {
     "reasoning",
     "tool",
     "tool_result",
+    "ui",
     "error",
     "done",
 }
