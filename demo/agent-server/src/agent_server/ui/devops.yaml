@@ -35,15 +35,14 @@ widgets:
       - { id: replicas, label: "Total replicas", format: number }
     empty_text: "No services in this environment."
 
-  # `refreshable: true` adds a manual refresh button to re-pull the table — handy
-  # after the model restarts/scales/deletes a service to see the new state.
+  # Tables get a manual refresh button by default (re-pulls the data_source) —
+  # handy after the model restarts/scales/deletes a service to see the new state.
   - name: service-table
     type: table
     position: { horizontal: left, vertical: high }
     size: { width: 12, height: auto }
     data_source: { action: service_state }
     has_header: true
-    refreshable: true
     empty_text: "No services in this environment."
 
   # ── Chat + tool-calls (below the dashboard; tools on the right) ───────────

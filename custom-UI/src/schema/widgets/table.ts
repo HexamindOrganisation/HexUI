@@ -29,7 +29,11 @@ export const TableWidgetSchema = {
     delimiter: { type: "string", minLength: 1, maxLength: 1 },
     /** Treat the first row as a header. Defaults to true. */
     has_header: { type: "boolean" },
-    /** Show a manual "refresh" button that re-pulls `data_source`. Default false. */
+    /**
+     * Manual "refresh" button that re-pulls `data_source`. Shown by default on
+     * any `data_source`-backed table; set `false` to hide it. (No effect on an
+     * inline-`content` table — there's nothing to re-pull.)
+     */
     refreshable: { type: "boolean" },
     /** Shown when no source is configured or the payload is empty. */
     empty_text: { type: "string" },

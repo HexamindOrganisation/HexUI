@@ -116,7 +116,9 @@ export function TableWidgetComponent({
       mime="text/csv"
       text={contextText}
       headerAction={
-        props.refreshable && props.data_source ? (
+        // Default on for data_source tables; `refreshable: false` opts out.
+        // Inline-content tables have nothing to re-pull, so never show it.
+        props.data_source && props.refreshable !== false ? (
           <button
             type="button"
             onClick={() => {

@@ -642,7 +642,7 @@ many data rows are displayed.
 | `rows`         | integer (1–10000)             | Number of data rows shown. Defaults to `20`. The header row, if any, is always shown and does not count toward this limit. |
 | `delimiter`    | single character              | CSV delimiter. Defaults to auto-detect among `,`, `;`, `\t`, `\|`. |
 | `has_header`   | boolean                       | Treat the first row as a sticky header. Defaults to `true`. |
-| `refreshable`  | boolean                       | Show a manual refresh button (in the card header) that re-pulls `data_source`. Defaults to `false`. No effect without a `data_source`. |
+| `refreshable`  | boolean                       | Manual refresh button (in the card header) that re-pulls `data_source`. **Shown by default** on any `data_source`-backed table; set `false` to hide it. No effect on an inline-`content` table. |
 | `empty_text`   | string                        | Shown when no source is configured or the payload is empty. |
 | `loading_text` | string                        | Shown while `data_source` is loading and no payload has arrived. |
 
