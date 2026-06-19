@@ -1,5 +1,7 @@
 <div align="center">
+
 # HexaUI
+
 </div>
 
 A **UI/UX-first multi-agent chat platform**. Developers bring their own
