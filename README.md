@@ -1,4 +1,8 @@
-# HexaUI
+<div align="center">
+
+# HexUI
+
+</div>
 
 A **UI/UX-first multi-agent chat platform**. Developers bring their own
 streaming agent backend (any framework); HexaUI provides the chat experience —
@@ -6,11 +10,18 @@ a configurable, YAML-driven UI, conversation history, folders, file attachments
 — and a thin proxy that normalizes any framework's event stream into one schema
 the UI renders.
 
-> **The pivot.** This repo began as a *unified agent runtime* (a backend that
-> wrapped LangChain/OpenAI/Google-ADK behind one protocol). That product was
-> dropped. HexaUI keeps the good parts — the event schema + the YAML widget
-> library — and refocuses on the **UI and the developer contract**. The old
-> runtime lives in [`legacy/`](legacy/) for reference only.
+<p align="center">
+  <img src="assets/hero.png" alt="HexaUI — the DevOps agent: a YAML-driven dashboard (service metrics + table) above a streaming chat, themed by the active agent's accent color." width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml"><img src="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/node-18+-339933?logo=node.js&logoColor=white" alt="Node 18+">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+</p>
 
 Core design principle: **the active agent's color is the only color in the
 product**, driven from a single variable (`page.main_color` → `--accent`).
@@ -184,4 +195,4 @@ See [demo/scripts/README.md](demo/scripts/README.md) for all smoke checks and
 
 ## License
 
-TBD.
+[MIT](LICENSE) © Hexamind.
