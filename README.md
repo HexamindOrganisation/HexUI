@@ -1,4 +1,12 @@
+<div align="center">
 # HexaUI
+</div>
+
+A **UI/UX-first multi-agent chat platform**. Developers bring their own
+streaming agent backend (any framework); HexaUI provides the chat experience —
+a configurable, YAML-driven UI, conversation history, folders, file attachments
+— and a thin proxy that normalizes any framework's event stream into one schema
+the UI renders.
 
 <p align="center">
   <a href="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml"><img src="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -12,18 +20,6 @@
 <p align="center">
   <img src="assets/hero.png" alt="HexaUI — the DevOps agent: a YAML-driven dashboard (service metrics + table) above a streaming chat, themed by the active agent's accent color." width="100%">
 </p>
-
-A **UI/UX-first multi-agent chat platform**. Developers bring their own
-streaming agent backend (any framework); HexaUI provides the chat experience —
-a configurable, YAML-driven UI, conversation history, folders, file attachments
-— and a thin proxy that normalizes any framework's event stream into one schema
-the UI renders.
-
-> **The pivot.** This repo began as a *unified agent runtime* (a backend that
-> wrapped LangChain/OpenAI/Google-ADK behind one protocol). That product was
-> dropped. HexaUI keeps the good parts — the event schema + the YAML widget
-> library — and refocuses on the **UI and the developer contract**. The old
-> runtime lives in [`legacy/`](legacy/) for reference only.
 
 Core design principle: **the active agent's color is the only color in the
 product**, driven from a single variable (`page.main_color` → `--accent`).
