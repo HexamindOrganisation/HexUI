@@ -81,7 +81,7 @@ users:
     role: default
   - email: manon@hexamind.ai
     password: hexademo
-    name: Manon Lefevre       # + leave_balance / performance_rating (own team)
+    name: Manon Lefevre       # + leave_balance / performance_rating (team-scoped in a real impl; stubs gate by field only)
     role: manager
   - email: chloe@hexamind.ai
     password: hexademo

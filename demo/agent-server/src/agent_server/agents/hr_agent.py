@@ -12,8 +12,11 @@ The policy does the gating on each tool call:
     arg, and each role widens the allowed ``args.field`` allowlist;
   - the ultra-sensitive medical read is its own tool (``get_medical_leave``) so it
     gates separately; salary writes, the aggregated payroll view, and offboarding
-    are gestionnaire_rh-only; ``export_payroll`` is volume-capped (``args.count``)
-    so a prompt-injected agent can't siphon the whole payroll.
+    are gestionnaire_rh-only; ``export_payroll`` declares a payslip ``count`` the
+    policy caps per role, so an over-limit export is denied at the gate. The cap
+    bounds the volume the agent *declares* — not a model that under-reports it; a
+    real export would derive ``count`` server-side from the actual selection
+    rather than trust the model's estimate.
 
 The tools are stubs (no datastore) — the demo is about the policy, not the data.
 ``stream`` / ``stream_as`` yield LangChain ``astream_events`` items the proxy's
@@ -48,9 +51,13 @@ def _actor() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tools — stubs. The constraint engine only sees the call's `args`; any check it
-# can't express (row-level "son équipe" scope, name → id resolution) belongs in
-# the body, keyed off the trusted User identity rather than a model-supplied arg.
+# Tools — stubs (no datastore), so the only gating they demonstrate is the
+# policy's arg-level check on each call's `args` (e.g. `args.field`, `args.count`).
+# Checks the constraint engine can't express — row-level "son équipe" scope,
+# name → id resolution — would live in the tool body keyed off the trusted User
+# identity (as the ITSM agent does via `_actor`); these stubs deliberately don't
+# implement them, so a caller is bounded by field-by-role gating only, NOT by
+# which employees are theirs to see.
 # ---------------------------------------------------------------------------
 
 
@@ -129,10 +136,15 @@ def view_compensation(team: str) -> str:
 def export_payroll(period: str, count: int) -> str:
     """Export `count` payslips for the given `period` (e.g. '2026-01').
 
-    Pass `count` = the number of payslips the export would produce. The
-    policy caps this per role so a runaway request can't dump the whole
-    company's payroll.
+    Pass `count` = the number of payslips the export would produce. The policy
+    enforces a per-role ceiling on `count`, so an export whose declared volume
+    exceeds the caller's limit is denied at the gate. This bounds the volume the
+    agent *declares*, not a model that under-reports `count` — a real export
+    would derive `count` server-side from the actual selection rather than trust
+    the model's estimate.
     """
+    if count <= 0:
+        return "(stub) export refusé — `count` doit être un entier positif."
     return f"(stub) export de {count} bulletins de paie pour {period} → PAY-EXP-3391"
 
 

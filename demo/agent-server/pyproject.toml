@@ -22,7 +22,7 @@ llm = [
 itsm = [
     "langchain-openai>=0.2",   # model backend (ChatOpenAI)
     "langchain-core>=0.3",     # tools (@tool)
-    "langgraph>=0.2",          # HR agent (create_react_agent)
+    "langgraph>=0.2.46",       # HR agent (create_react_agent; `prompt=` kwarg lands in 0.2.46)
     "deepagents>=0.0.5",       # ITSM agent (create_deep_agent over LangGraph)
 ]
 dev = [
