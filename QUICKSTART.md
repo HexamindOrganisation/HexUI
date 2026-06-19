@@ -73,7 +73,7 @@ Open <http://localhost:8873>.
 1. Loading the app redirects you to **/login** (the route guard fires).
 2. Log in as one of the demo accounts (all share the same password, `hexademo`):
    - `guest@example.com` (no role) — exercises the fail-closed `default` (deny)
-   - `vince@hexamind.ai` (viewer), `olivia@hexamind.ai` (operator),
+   - `vince@hexamind.ai` (default), `olivia@hexamind.ai` (operator),
      `aaron@hexamind.ai` (admin) — devops roles
    - `nadia@clinic.org` (nurse), `priya@clinic.org` (physician),
      `bianca@clinic.org` (billing_staff) — healthcare roles

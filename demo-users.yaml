@@ -36,7 +36,7 @@ users:
   # ── Hexamind org (DevOps + ITSM) ── one merged group; everyone can reach BOTH
   # agents. Each keeps a single role, meaningful to one agent; talking to the
   # other falls through to that policy's fail-closed `default` (deny).
-  #   DevOps roles:  viewer < operator < admin            (devops_policy.yaml)
+  #   DevOps roles:  default < operator < admin           (devops_policy.yaml)
   #   ITSM roles:    requester, implementer, change_manager, cab_manager
   #                  (itsm_policy.yaml — ownership/scope key off `name`, which
   #                  must match the seed in itsm_db.py: Alice Martin owns
@@ -44,7 +44,7 @@ users:
   - email: vince@hexamind.ai
     password: hexademo
     name: Vince Reilly        # devops: read service logs only
-    role: viewer
+    role: default
     agents: [devops, itsm, hr]
   - email: olivia@hexamind.ai
     password: hexademo
