@@ -1,4 +1,4 @@
-"""HexaUI contract wrapper for the healthcare agent.
+"""HexKit contract wrapper for the healthcare agent.
 
 Resolves the OpenAI key, picks the plain or HexGate-gated path, and forwards each
 SDK event as a native event. The agent itself lives in ``healthcare_agent``;
@@ -39,12 +39,12 @@ class HealthcareAgent:
 
         # HexGate-gated path whenever HexGate is configured; plain SDK otherwise.
         if os.getenv("HEXGATE_KEY"):
-            # Scope policy decisions to the signed-in HexUI user. `id` / `role`
+            # Scope policy decisions to the signed-in HexKit user. `id` / `role`
             # ride in `context.user` (CONTRACT.md §5); fall back to the static
             # demo identity and HEXGATE_ROLE for standalone runs that send no
             # user block.
             caller = protocol.caller(context)
-            user_id = caller.get("id") or "hexui-demo"
+            user_id = caller.get("id") or "hexkit-demo"
             role = caller.get("role") or os.getenv("HEXGATE_ROLE", "nurse")
             events = healthcare_agent.stream_as(
                 agent_input(input), user_id=user_id, role=role

@@ -2,7 +2,7 @@
 
 This is the entire surface a developer's backend has to emit. Each event is one
 SSE frame — ``data: {compact-json}\\n\\n`` — on a ``text/event-stream`` response.
-The HexaUI proxy normalizes these into the rich internal event schema,
+The HexKit proxy normalizes these into the rich internal event schema,
 synthesizing run ids, sequence numbers, block lifecycle, and the
 ``run_start`` / ``run_end`` envelope. Developers never construct any of that.
 

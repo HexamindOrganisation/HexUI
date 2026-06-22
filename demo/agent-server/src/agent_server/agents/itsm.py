@@ -1,8 +1,8 @@
-"""HexaUI contract wrapper for the ITSM change-request agent.
+"""HexKit contract wrapper for the ITSM change-request agent.
 
 Resolves the OpenAI key, picks the plain or HexGate-gated path, and projects each
 LangChain event into a native event. The agent lives in ``itsm_agent``; ownership
-keys off the caller's **name** (HexUI never forwards email — see ``itsm_db``).
+keys off the caller's **name** (HexKit never forwards email — see ``itsm_db``).
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class ItsmAgent:
             # `name` / `role` ride in `context.user` (CONTRACT.md §5); fall back to
             # a static identity for standalone runs that send no user block.
             caller = protocol.caller(context)
-            identity = caller.get("name") or "hexui-demo"
+            identity = caller.get("name") or "hexkit-demo"
             role = caller.get("role") or os.getenv("HEXGATE_ROLE", "requester")
             events = itsm_agent.stream_as(input, user_id=identity, role=role)
         else:

@@ -22,7 +22,7 @@ Without API keys the agents reply with an echo placeholder. That's fine for a fi
 
 ## One-time setup
 
-From the repo root (`HexUI/`):
+From the repo root (`HexKit/`):
 
 ```bash
 make setup
@@ -58,7 +58,7 @@ To enable real LLM replies (instead of echo), prepend the env var:
 AGENT_ENABLE_LLM=1 bash demo/scripts/run-backends.sh
 ```
 
-Provider keys live in the **agent backend's** environment, not the app — set `OPENAI_API_KEY` (Probe + healthcare/devops) and/or `GOOGLE_API_KEY` (Orbit) in your shell or in `demo/agent-server/.env` before starting the backends. HexUI never holds your model keys.
+Provider keys live in the **agent backend's** environment, not the app — set `OPENAI_API_KEY` (Probe + healthcare/devops) and/or `GOOGLE_API_KEY` (Orbit) in your shell or in `demo/agent-server/.env` before starting the backends. HexKit never holds your model keys.
 
 #### Terminal 2 — frontend
 

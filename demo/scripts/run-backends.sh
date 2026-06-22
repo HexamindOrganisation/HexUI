@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch the HexaUI backends for local dev — agent-server (:8880) + proxy (:8800)
+# Launch the HexKit backends for local dev — agent-server (:8880) + proxy (:8800)
 # on a throwaway SQLite DB (no Postgres needed). Run from the repo root under WSL:
 #
 #     bash demo/scripts/run-backends.sh
@@ -27,7 +27,7 @@ trap cleanup EXIT INT TERM
 export AGENT_ENABLE_LLM="${AGENT_ENABLE_LLM:-0}"
 
 # Export agent-server secrets (OPENAI_API_KEY, GOOGLE_API_KEY, HEXGATE_KEY) from
-# its .env. The agent backend reads its provider keys from this env — HexUI
+# its .env. The agent backend reads its provider keys from this env — HexKit
 # never sends them.
 if [ -f demo/agent-server/.env ]; then
   set -o allexport

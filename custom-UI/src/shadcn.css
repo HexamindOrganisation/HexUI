@@ -1,5 +1,5 @@
 /*
- * agent-ui shadcn base layer — themed to HexaUI.
+ * agent-ui shadcn base layer — themed to HexKit.
  *
  * Consumer usage (from your app's CSS entry):
  *   @import "agent-ui/shadcn.css";
@@ -7,8 +7,8 @@
  * Pair with the Tailwind preset:
  *   presets: [require("agent-ui/tailwind-preset")]
  *
- * The shadcn HSL tokens are mapped onto the HexaUI neutral scale (Spec §2), so
- * every native widget inherits the HexaUI look automatically. The ONE color in
+ * The shadcn HSL tokens are mapped onto the HexKit neutral scale (Spec §2), so
+ * every native widget inherits the HexKit look automatically. The ONE color in
  * the product is the active agent's hue: `page.main_color` → `--primary` /
  * `--ring` (set inline at the page root by the theme bridge) and a raw hex
  * `--accent-color` for links / carets / status dots. Chrome stays monochrome —
@@ -20,7 +20,7 @@
 
 @layer base {
   :root {
-    /* ----- HexaUI light neutral scale (Spec §2) ----- */
+    /* ----- HexKit light neutral scale (Spec §2) ----- */
     --background: 0 0% 100%; /* --bg #ffffff */
     --foreground: 216 14% 11%; /* --text #191c21 */
 
@@ -52,7 +52,7 @@
 
     --radius: 0.6875rem; /* --r-md 11px */
 
-    /* ----- HexaUI raw tokens (for widget chrome that needs them) ----- */
+    /* ----- HexKit raw tokens (for widget chrome that needs them) ----- */
     --hx-bg: #ffffff;
     --hx-bg-2: #f5f6f7;
     --hx-surface: #ffffff;
@@ -78,7 +78,7 @@
   }
 
   .dark {
-    /* ----- HexaUI dark neutral scale (Spec §2) ----- */
+    /* ----- HexKit dark neutral scale (Spec §2) ----- */
     --background: 240 2% 12%; /* --bg #1e1e1f */
     --foreground: 220 9% 93%; /* --text #ecedef */
 
@@ -106,7 +106,7 @@
     --input: 240 3% 22%;
     --ring: 174 43% 47%;
 
-    /* ----- HexaUI raw tokens (dark) ----- */
+    /* ----- HexKit raw tokens (dark) ----- */
     --hx-bg: #1e1e1f;
     --hx-bg-2: #181819;
     --hx-surface: #282829;

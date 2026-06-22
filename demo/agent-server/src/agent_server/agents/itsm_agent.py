@@ -1,12 +1,12 @@
 """ITSM Change-Request agent — RBAC + state-machine guard (deepagents/LangChain).
 
-Vendored from ``hexgate/examples/itsm_agent.py``; the HexaUI wrapper is ``itsm.py``.
+Vendored from ``hexgate/examples/itsm_agent.py``; the HexKit wrapper is ``itsm.py``.
 Two checks per action: the policy answers "does the ROLE grant this tool?" (each
 transition is its own tool, so separation of duties is structural); the tool body
 answers "is the transition valid from the current state, and does the actor own
 the record?" — keyed off the trusted ``User`` the policy can't see.
 
-Identity = the caller's NAME (HexUI never forwards email — see ``itsm_db``), so
+Identity = the caller's NAME (HexKit never forwards email — see ``itsm_db``), so
 ownership compares against ``requester_name`` / ``implementer_name``.
 
     new ──(requester)──▶ Assess ──(change_manager)──▶ Authorize ──(cab_manager)──▶ Schedule
@@ -323,7 +323,7 @@ async def stream_as(input: Any, *, user_id: str, role: str) -> AsyncIterator[Any
     / scope); ``role`` is the opaque role from ``context.user``."""
     from hexgate.runtime import User
 
-    user = User(user_id=user_id, role=role, session_id="hexui-demo-itsm")
+    user = User(user_id=user_id, role=role, session_id="hexkit-demo-itsm")
     async for event in _enforced_agent().astream_events(
         messages_input(input), user=user
     ):

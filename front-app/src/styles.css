@@ -14,7 +14,7 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
-/* HexaUI shell: AgentUI fills the chat area under the 58px top bar; the
+/* HexKit shell: AgentUI fills the chat area under the 58px top bar; the
  * transcript (main slot) scrolls while the composer (footer slot) stays pinned
  * to the bottom. Overrides the library's standalone `min-height:100vh` default
  * — scoped to this app, so other agent-ui consumers are unaffected. */
@@ -127,7 +127,7 @@ body {
 }
 
 /* ============================================================
-   File handling — ported from the original HexaUI design handoff.
+   File handling — ported from the original HexKit design handoff.
    Tokens are scoped to `.hxf` and mapped onto the shell's shadcn theme
    + the active agent accent, so file UI recolors with the agent and
    stays the only color.

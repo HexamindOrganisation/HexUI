@@ -156,7 +156,7 @@ function StatusDot({
 }: {
   status: FoldedEntry["status"];
 }): JSX.Element {
-  // HexaUI: amber pulsing (running) → agent accent (done) → rose (error).
+  // HexKit: amber pulsing (running) → agent accent (done) → rose (error).
   // `bg-primary` is the agent color via the theme bridge (page.main_color).
   const tone =
     status === "running"

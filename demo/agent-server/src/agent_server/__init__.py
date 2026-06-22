@@ -1,4 +1,4 @@
-"""Reference developer backend — the executable spec for the HexaUI contract."""
+"""Reference developer backend — the executable spec for the HexKit contract."""
 
 import os
 

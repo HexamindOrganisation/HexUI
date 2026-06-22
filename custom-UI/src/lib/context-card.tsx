@@ -3,7 +3,7 @@ import { useAgentUIContext } from "../runtime/context.js";
 
 /**
  * Frame for a display widget (table / markdown) that can toggle its content
- * into the conversation's model context. Ported from the HexaUI "Context Toggle"
+ * into the conversation's model context. Ported from the HexKit "Context Toggle"
  * design: a header (icon + caption + the pill switch) over the widget body; when
  * on, the card lights to the agent accent with a one-shot scan/glow.
  *

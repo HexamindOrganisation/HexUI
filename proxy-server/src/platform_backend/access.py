@@ -12,7 +12,7 @@ empty today; this is the one-line hook for a future shared agent (e.g. add
 
 Enforced proxy-side: the roster (`GET /agents`) is filtered to the accessible
 set, and the agent-scoped routes (`/ui`, `/actions`, conversation creation)
-reject the rest. The agent backend never sees this — it's a HexUI concern.
+reject the rest. The agent backend never sees this — it's a HexKit concern.
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
-"""Project OpenAI Agents SDK stream events into HexaUI native events.
+"""Project OpenAI Agents SDK stream events into HexKit native events.
 
 Reusable for any ``agents.Agent``: ``to_native_event`` maps one
 ``stream_events()`` item to the native JSON event the proxy's
-``OpenAIAgentsTranslator`` reads; ``agent_input`` shapes HexaUI input for the SDK.
+``OpenAIAgentsTranslator`` reads; ``agent_input`` shapes HexKit input for the SDK.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from .. import protocol
 
 
 def agent_input(input: dict[str, Any]) -> Any:
-    """HexaUI ``{"messages": [...]}`` → SDK input (full transcript, or last user text)."""
+    """HexKit ``{"messages": [...]}`` → SDK input (full transcript, or last user text)."""
     messages = (input or {}).get("messages")
     if isinstance(messages, list) and messages:
         return messages

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./auth/AuthContext";
 import { AppRouter } from "./router";
 
-// HexaUI fonts: Hanken Grotesk (UI), Source Serif 4 (display), IBM Plex Mono
+// HexKit fonts: Hanken Grotesk (UI), Source Serif 4 (display), IBM Plex Mono
 // (data). Loaded here so the whole app — chrome + AgentUI widgets — picks them
 // up via the --font-* tokens in agent-ui/shadcn.css.
 import "@fontsource/hanken-grotesk/400.css";

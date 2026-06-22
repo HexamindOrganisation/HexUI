@@ -7,7 +7,7 @@ import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 
 /**
- * The constant HexaUI chrome: a folding sidebar + top bar wrapping the MAIN
+ * The constant HexKit chrome: a folding sidebar + top bar wrapping the MAIN
  * region (`<AgentUI>`, rendered by ChatPage via the Outlet). The active agent's
  * `main_color` sets the accent CSS vars at the shell root, so the whole product
  * — sidebar glyphs, picker, composer send — tints from that one variable.

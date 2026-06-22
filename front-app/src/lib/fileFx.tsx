@@ -2,7 +2,7 @@ import { Code2, FileText, Sheet } from "lucide-react";
 
 /**
  * File-presentation helpers + the shared monochrome glyph, ported from the
- * HexaUI file-handling design handoff. The agent stays the only color, so
+ * HexKit file-handling design handoff. The agent stays the only color, so
  * glyphs are neutral and only distinguish by icon (doc / sheet / code).
  */
 

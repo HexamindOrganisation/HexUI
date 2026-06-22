@@ -3,7 +3,7 @@
 An agent declares the `framework` whose native events it emits, and its `run`
 is an async generator yielding those native events (already JSON-able). The
 server route wraps each as `{"framework": ..., "event": ...}` and frames it to
-SSE; the HexaUI proxy selects the matching translator and normalizes the stream.
+SSE; the HexKit proxy selects the matching translator and normalizes the stream.
 
 `framework="native"` means the agent emits the minimal already-normalized events
 (see `agent_server.protocol`) — the zero-translation escape hatch.

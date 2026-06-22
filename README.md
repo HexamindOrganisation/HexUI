@@ -1,21 +1,21 @@
 <div align="center">
 
-# HexUI
+# HexKit
 
 </div>
 
 A **UI/UX-first multi-agent chat platform**. Developers bring their own
-streaming agent backend (any framework); HexaUI provides the chat experience —
+streaming agent backend (any framework); HexKit provides the chat experience —
 a configurable, YAML-driven UI, conversation history, folders, file attachments
 — and a thin proxy that normalizes any framework's event stream into one schema
 the UI renders.
 
 <p align="center">
-  <img src="assets/hero.png" alt="HexaUI — the DevOps agent: a YAML-driven dashboard (service metrics + table) above a streaming chat, themed by the active agent's accent color." width="100%">
+  <img src="assets/hero.png" alt="HexKit — the DevOps agent: a YAML-driven dashboard (service metrics + table) above a streaming chat, themed by the active agent's accent color." width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml"><img src="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/HexamindOrganisation/hexkit/actions/workflows/ci.yml"><img src="https://github.com/HexamindOrganisation/hexkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/node-18+-339933?logo=node.js&logoColor=white" alt="Node 18+">
@@ -67,7 +67,7 @@ events; the **proxy translates** and the **UI renders from YAML**. See
 | Path | Purpose |
 |---|---|
 | [custom-UI/](custom-UI/) | The product's heart: a React + TS library that renders a configurable agent UI from YAML (`<AgentUI>` + 12 built-in widgets). Theme bridge, streaming chat, the actions/`data_source` system. |
-| [front-app/](front-app/) | The HexaUI shell that consumes `custom-UI` and talks to the proxy. |
+| [front-app/](front-app/) | The HexKit shell that consumes `custom-UI` and talks to the proxy. |
 | [proxy-server/](proxy-server/) | The platform backend (FastAPI): JWT auth, conversations, folders, files, and the per-framework translators that normalize native events into the hexa SSE schema. Import package stays `platform_backend`. |
 | [packages/hexa-events/](packages/hexa-events/) | The internal event schema package consumed by the proxy (a local path dependency). |
 | [demo/](demo/) | The runnable reference backends: [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 6 sample agents), [`hexgate-agent/`](demo/hexgate-agent/) (a standalone hexgate-wrapped backend), [`starter-agent/`](demo/starter-agent/) (a minimal **copy-me** backend — the whole contract in one file), and [`scripts/`](demo/scripts/) (run + smoke checks, incl. the `verify_backend.py` conformance CLI). |
@@ -103,8 +103,8 @@ To get real model replies rather than the deterministic echo/canned fallback,
 put your provider keys in the **agent backend's environment** (`OPENAI_API_KEY`
 for Probe + the healthcare/devops agents, `GOOGLE_API_KEY` for Orbit) and start
 it with `AGENT_ENABLE_LLM=1` — see [`demo/agent-server/.env.sample`](demo/agent-server/.env.sample).
-HexUI never holds your model keys. The **Settings** page carries only your
-display name and a free-text `role`; if you point HexUI at a `hexgate`-wrapped
+HexKit never holds your model keys. The **Settings** page carries only your
+display name and a free-text `role`; if you point HexKit at a `hexgate`-wrapped
 agent, that role is forwarded to the agent and drives hexgate's per-tool policy
 + audit pipeline.
 

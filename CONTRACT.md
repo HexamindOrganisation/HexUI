@@ -1,6 +1,6 @@
-# HexaUI Developer Contract (v1)
+# HexKit Developer Contract (v1)
 
-> The contract between a **developer's agent backend** and the **HexaUI proxy**.
+> The contract between a **developer's agent backend** and the **HexKit proxy**.
 > It imposes only the **shape of the API** (five endpoints) and that each stream
 > frame is **tagged with the framework that produced it**. You do *not* rewrite
 > your agent's events: you forward your framework's **native** events, tagged,
@@ -15,7 +15,7 @@
 ## 1. Roles
 
 ```
-browser ──HTTP/SSE──▶ HexaUI proxy ──HTTP/SSE──▶ your agent backend
+browser ──HTTP/SSE──▶ HexKit proxy ──HTTP/SSE──▶ your agent backend
                        (this platform)            (you implement this)
 ```
 
@@ -65,16 +65,16 @@ previous revision; see those sections at the end.)
 
 - `run_id` — opaque id the proxy assigns; accept it on `cancel`.
 - `input.messages` — the chat transcript.
-- **Provider API keys are *not* in the context.** HexUI does not store or forward
+- **Provider API keys are *not* in the context.** HexKit does not store or forward
   them — your backend reads its own provider keys (OpenAI, Google, …) from its
   own environment. The platform never holds your model credentials.
 - `context.files` — files the user attached to the conversation (persist across
   turns; forwarded every run). `content` is the decoded text for text mimes,
   `null` for binary (fetch by `id` is post-v1). Inline them into the prompt /
   provider content blocks as your framework needs.
-- `context.user` — caller identity. Always exactly three keys: `id` (the HexUI
+- `context.user` — caller identity. Always exactly three keys: `id` (the HexKit
   user uuid), `name` (display name or `null`), and `role` (free-text string or
-  `null`). HexUI does not interpret `role`; it's there so policy-aware runtimes
+  `null`). HexKit does not interpret `role`; it's there so policy-aware runtimes
   (hexgate, etc.) can scope per-call decisions to the calling user.
   **NEVER** includes email, password hash, or any internal identifier. An agent
   backend that doesn't use this can ignore the block.

@@ -11,8 +11,8 @@ from ..routes.agents import router as agents_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="HexaUI Reference Agent Server",
-        description="Executable spec for the HexaUI streaming contract",
+        title="HexKit Reference Agent Server",
+        description="Executable spec for the HexKit streaming contract",
         version="0.1.0",
     )
     # In-memory run registry: run_id -> cancel Event, populated by the stream

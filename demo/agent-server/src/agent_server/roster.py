@@ -1,7 +1,7 @@
 """The agent roster + per-agent ``ui.yaml`` loading.
 
 The roster is the ``GET /agents`` payload: one entry per agent with the
-fields the HexaUI proxy/shell needs to render a picker and theme the chrome.
+fields the HexKit proxy/shell needs to render a picker and theme the chrome.
 ``main_color`` is the single color that drives the active agent's accent.
 """
 
