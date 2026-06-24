@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/hexkit-mark.svg" width="72" height="72" alt="HexKit">
+
 # HexKit
 
 </div>
@@ -123,6 +125,155 @@ The bundled agents demonstrate the contract end to end:
 | **Healthcare** | `openai-agents` (OpenAI) | a real clinical-assistant agent; HexGate-gated when `HEXGATE_KEY` is set, scoping per-tool policy to the caller's `context.user` role |
 | **DevOps** | `google-adk` (OpenAI via LiteLLM) | a real infra-assistant agent; HexGate-gated when `HEXGATE_KEY` is set, scoping per-tool policy to the caller's `context.user` role |
 | **Hexgate Guard** | `hexgate` | a hexgate-wrapped agent that opens `User(user_id, role)` per run and emits audit decisions to the hexgate cloud (separate backend at [`demo/hexgate-agent/`](demo/hexgate-agent/)) |
+
+---
+
+## Components
+
+Every agent UI is built out of these widgets. You compose them in a `ui.yaml` —
+`type` picks the widget, `position` + `size` lay it out on the grid,
+`data_source` wires it to one of your `/actions/{name}` endpoints. No React,
+no CSS.
+
+<table>
+<tr>
+<td width="50%">
+
+**`ai-response`** — streaming chat surface
+
+The flagship widget. Renders the assistant's turn as it streams; embeds tool calls, markdown, code blocks, files inline.
+
+```yaml
+- name: transcript
+  type: ai-response
+  position: { horizontal: left, vertical: high }
+  size: { width: 8, height: 520 }
+  empty_text: "Ask something…"
+  thinking_indicator: dots
+```
+
+</td>
+<td width="50%">
+
+**`ai-chat-input`** — composer with attachments
+
+Text input + file attach + keyboard send. Forwards the composed turn through `POST /conversations/{id}/messages`.
+
+```yaml
+- name: chat-input
+  type: ai-chat-input
+  position: { horizontal: left, vertical: low }
+  size: { width: 12, height: auto }
+  placeholder: "Message Hexgate Guard…"
+  rows: 2
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**`metrics`** — KPI strip
+
+A row of labeled stat tiles. Pulls its values from a `data_source` action; auto-refreshes when a button-group action lists it in `refresh:`.
+
+```yaml
+- name: kpis
+  type: metrics
+  size: { width: 12, height: auto }
+  columns: 4
+  data_source: { action: change_summary }
+  metrics:
+    - { id: new, label: "New", format: number }
+```
+
+</td>
+<td>
+
+**`table`** — scrollable data grid
+
+Header row + virtualized rows. Sourced from an action that returns rows; can be refreshed by a button.
+
+```yaml
+- name: changes
+  type: table
+  size: { width: 12, height: auto }
+  data_source: { action: change_table }
+  has_header: true
+  empty_text: "No changes yet."
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**`tool-calls`** — live tool log
+
+Shows each tool the agent calls in real time, with arguments, status, and result. Default landing surface for any unaddressed tool call.
+
+```yaml
+- name: tools
+  type: tool-calls
+  position: { horizontal: right, vertical: high }
+  size: { width: 4, height: 520 }
+  empty_text: "Tool calls will appear here."
+```
+
+</td>
+<td>
+
+**`markdown`** — rich text + code
+
+Static markdown sourced from a string, or live markdown that the agent updates via a data source (e.g. a runbook the agent edits).
+
+```yaml
+- name: runbook
+  type: markdown
+  size: { width: 8, height: auto }
+  data_source: { action: get_runbook }
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**`form`** — structured input
+
+Labeled fields the user submits as one payload to an action. Each field declares its type; submit fires `POST /actions/{name}`.
+
+```yaml
+- name: deploy
+  type: form
+  size: { width: 6, height: auto }
+  action: deploy_service
+  fields:
+    - { name: env, label: Environment, type: text }
+    - { name: replicas, label: Replicas, type: number }
+```
+
+</td>
+<td>
+
+**`button-group`** — actions row
+
+A row of buttons, each tied to an action. Optional `refresh:` list re-pulls the named widgets after the action completes — the basis for the lifecycle dashboards in ITSM / DevOps.
+
+```yaml
+- name: ops
+  type: button-group
+  size: { width: 12, height: auto }
+  buttons:
+    - { label: "Refresh", action: refresh_changes,
+        refresh: [change-metrics, change-table] }
+```
+
+</td>
+</tr>
+</table>
+
+Five more widgets ship for layout and forms: `dropdown`, `page-header`, `page-footer`, `placeholder`, `spacer`. See [`custom-UI/src/widgets/`](custom-UI/src/widgets/) for the full catalog and [demo/agent-server/src/agent_server/ui/](demo/agent-server/src/agent_server/ui/) for complete `ui.yaml` examples (the ITSM and DevOps agents stitch most of the widgets together into a live ops dashboard).
 
 ---
 
