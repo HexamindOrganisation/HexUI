@@ -1,4 +1,4 @@
-"""HexaUI contract wrapper for the HR (RH) agent.
+"""HexKit contract wrapper for the HR (RH) agent.
 
 Resolves the OpenAI key, picks the plain or HexGate-gated path, and projects each
 LangChain event into a native event. The agent lives in ``hr_agent``; the caller's
@@ -46,7 +46,7 @@ class HrAgent:
             # `name` / `role` ride in `context.user` (CONTRACT.md §5); fall back to
             # a static identity for standalone runs that send no user block.
             caller = protocol.caller(context)
-            identity = caller.get("name") or "hexui-demo"
+            identity = caller.get("name") or "hexkit-demo"
             role = caller.get("role") or os.getenv("HEXGATE_ROLE", "default")
             if role not in _HR_ROLES:
                 role = "default"

@@ -26,7 +26,7 @@ class User(Base):
     # Display name. Optional — falls back to the email's local-part in the UI.
     name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # Opaque role string forwarded to hexgate-wrapped agents as
-    # `context.user.role`. HexUI never interprets it; each dev team decides
+    # `context.user.role`. HexKit never interprets it; each dev team decides
     # their own role vocabulary.
     role: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Agent allow-list: the agent ids this user may reach. `NULL` (or empty)

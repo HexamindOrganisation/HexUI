@@ -1,8 +1,8 @@
 """
-Normalized event schema for the HexaUI streaming contract.
+Normalized event schema for the HexKit streaming contract.
 
 This module is the wire contract between a developer's agent backend and the
-HexaUI proxy. It is a trimmed descendant of the old unified-runtime event
+HexKit proxy. It is a trimmed descendant of the old unified-runtime event
 schema: the core lifecycle (run / block / tool / error) is preserved verbatim
 so existing consumers and the proxy's SSE parser keep working unchanged, while
 the framework-observability and human-in-the-loop layers are dropped.

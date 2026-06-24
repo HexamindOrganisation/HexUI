@@ -1,7 +1,7 @@
 [project]
 name = "hexgate-agent"
 version = "0.1.0"
-description = "HexaUI backend serving a hexgate-wrapped agent — forwards hexgate's normalized events tagged framework='hexgate'"
+description = "HexKit backend serving a hexgate-wrapped agent — forwards hexgate's normalized events tagged framework='hexgate'"
 # hexgate requires >=3.13; this backend inherits that floor (the other demo
 # backends only need 3.11). Create this venv with a 3.13+ interpreter.
 requires-python = ">=3.13"

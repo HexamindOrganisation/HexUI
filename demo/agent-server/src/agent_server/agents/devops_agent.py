@@ -2,7 +2,7 @@
 
 The tools + ``agent``, and how to invoke it: ``stream`` (plain ADK runner) and
 ``stream_as`` (the same agent gated by HexGate policy). Vendored from
-``hexgate/examples/devops_agent.py``. The HexaUI contract wrapper that the
+``hexgate/examples/devops_agent.py``. The HexKit contract wrapper that the
 server runs lives in ``devops.py``; the ADK ``Event`` → native projection lives
 in ``google_adk``.
 
@@ -97,8 +97,8 @@ agent = Agent(
 # ── Invocation ───────────────────────────────────────────────────────────────
 
 _APP_NAME = "devops_agent"
-_USER_ID = "hexui-demo"
-_SESSION_ID = "hexui-demo-devops"
+_USER_ID = "hexkit-demo"
+_SESSION_ID = "hexkit-demo-devops"
 
 
 def _message(text: str) -> types.Content:
@@ -124,7 +124,7 @@ async def stream_as(text: str, *, user_id: str, role: str) -> AsyncIterator[Any]
     ``role`` (viewer < operator < admin) is what flips each decision.
     ``HexgateRunner`` reads ``HEXGATE_KEY`` from the environment.
 
-    ``user_id`` and ``role`` come from the HexUI caller (``context.user``); the
+    ``user_id`` and ``role`` come from the HexKit caller (``context.user``); the
     wrapper in ``devops.py`` resolves them.
     """
     from hexgate.adapters.google import HexgateRunner

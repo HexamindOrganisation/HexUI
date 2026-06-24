@@ -2,7 +2,7 @@
 
 The tools + ``agent``, and how to invoke it: ``stream`` (plain SDK) and
 ``stream_as`` (the same agent gated by HexGate policy). Vendored from
-``hexgate/examples/healthcare_agent.py``. The HexaUI contract wrapper that the
+``hexgate/examples/healthcare_agent.py``. The HexKit contract wrapper that the
 server runs lives in ``healthcare.py``.
 """
 
@@ -112,14 +112,14 @@ async def stream_as(input: Any, *, user_id: str, role: str) -> AsyncIterator[Any
     """Same as :func:`stream`, but through HexGate as ``user_id`` / ``role`` —
     every tool call is policy-gated against the calling user.
 
-    ``user_id`` and ``role`` come from the HexUI caller (``context.user``); the
+    ``user_id`` and ``role`` come from the HexKit caller (``context.user``); the
     wrapper in ``healthcare.py`` resolves them. Policy decisions and audit events
     are tagged with this identity.
     """
     from hexgate.adapters.openai import HexgateRunner
     from hexgate.runtime import User
 
-    user = User(user_id=user_id, session_id="hexui-demo-healthcare", role=role)
+    user = User(user_id=user_id, session_id="hexkit-demo-healthcare", role=role)
     result = HexgateRunner().run_streamed(agent, input, user=user)
     async for event in result.stream_events():
         yield event

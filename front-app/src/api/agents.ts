@@ -1,7 +1,7 @@
 import { authedFetch, getJson, postJson } from "./client";
 
 /**
- * Roster entry from the proxy's `GET /agents` (HexaUI contract). `main_color`
+ * Roster entry from the proxy's `GET /agents` (HexKit contract). `main_color`
  * is the agent's signature hue — the one color that recolors the page.
  */
 export interface AgentSummary {

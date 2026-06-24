@@ -1,6 +1,6 @@
 # M1 smoke checks
 
-Executable verification of the HexaUI streaming contract (M1). Both run against
+Executable verification of the HexKit streaming contract (M1). Both run against
 the real code — no mocks of the contract itself.
 
 First-time setup (creates the venvs from the pyprojects; needs [`uv`](https://docs.astral.sh/uv/)):

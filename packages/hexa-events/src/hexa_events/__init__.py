@@ -1,6 +1,6 @@
-"""HexaUI streaming event schema + emit-side helpers.
+"""HexKit streaming event schema + emit-side helpers.
 
-The wire contract between a developer's agent backend and the HexaUI proxy.
+The wire contract between a developer's agent backend and the HexKit proxy.
 Install via ``pip install -e packages/hexa-events`` (or ``file:`` path) in
 both the agent-server and the proxy so the schema can't drift.
 """

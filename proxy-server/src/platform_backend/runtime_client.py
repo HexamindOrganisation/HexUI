@@ -6,7 +6,7 @@ swap the transport via `set_client(...)` so they can drive a `MockTransport`
 without standing up a real backend.
 
 The streaming method (`stream`) yields raw upstream bytes so the chat route
-can pass them through the wire untouched — the SSE schema is the HexaUI
+can pass them through the wire untouched — the SSE schema is the HexKit
 streaming contract, not the proxy's invention.
 """
 

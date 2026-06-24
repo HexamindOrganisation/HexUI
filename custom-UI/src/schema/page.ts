@@ -27,7 +27,7 @@ export const PageSchema = {
     layout_type: { enum: ["grid", "flex"] },
     /**
      * The active agent's signature color — the ONE variable that recolors the
-     * whole page (HexaUI's core principle). Bridges to shadcn `--primary` /
+     * whole page (HexKit's core principle). Bridges to shadcn `--primary` /
      * `--ring` (and the legacy `--accent` agent usage). Takes precedence over
      * `theme.accent`. Hex (`#RGB`, `#RRGGBB`, `#RRGGBBAA`).
      */

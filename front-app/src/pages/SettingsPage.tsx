@@ -8,11 +8,11 @@ import { useAuth } from "../auth/AuthContext";
  * Settings — display profile.
  *
  * `role` is a free-text optional string forwarded to hexgate-wrapped agents
- * as `context.user.role`. HexUI never interprets it; the dev team picks the
+ * as `context.user.role`. HexKit never interprets it; the dev team picks the
  * vocabulary in their hexgate policy.
  *
  * Provider API keys are NOT configured here — the agent backend reads its own
- * keys from its environment (see the backend's `.env`). HexUI never holds them.
+ * keys from its environment (see the backend's `.env`). HexKit never holds them.
  */
 export function SettingsPage() {
   const { user, setUser } = useAuth();
@@ -40,7 +40,7 @@ export function SettingsPage() {
       <h1 className="mb-1 text-lg font-semibold tracking-tight">Settings</h1>
       <p className="mb-8 text-sm text-muted-foreground">
         Your display name and optional hexgate role. Provider API keys live in
-        the agent backend's environment — HexUI never holds them.
+        the agent backend's environment — HexKit never holds them.
       </p>
 
       <section className="mb-8">
