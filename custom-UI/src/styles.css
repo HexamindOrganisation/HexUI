@@ -281,7 +281,7 @@
 }
 
 /* ============================================================
- * HexaUI chat — metaball thinking loader, streaming caret, status shimmer.
+ * HexKit chat — metaball thinking loader, streaming caret, status shimmer.
  * All tint from the agent color via --accent-color (set by the theme bridge),
  * falling back to the shadcn primary.
  * ============================================================ */
@@ -386,7 +386,7 @@
 
 /* ============================================================
    File handling — composer attach popover + attached pills.
-   Ported from the HexaUI design handoff; tokens scoped to `.hxf`
+   Ported from the HexKit design handoff; tokens scoped to `.hxf`
    and mapped onto the shadcn palette + the active agent accent.
    The agent stays the only color; glyphs are neutral.
    ============================================================ */

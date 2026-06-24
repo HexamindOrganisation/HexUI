@@ -1,6 +1,6 @@
 # front-app
 
-The **HexaUI shell** — the user-facing web app. It wraps the
+The **HexKit shell** — the user-facing web app. It wraps the
 [`agent-ui`](../custom-UI/) library (`<AgentUI>`, rendered from each agent's
 `ui.yaml`) in constant chrome and talks to the [proxy](../proxy-server/) over
 HTTP + SSE through a single origin (`/api/*`).

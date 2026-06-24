@@ -1,4 +1,4 @@
-# HexaUI dev Makefile — see QUICKSTART.md for prerequisites (uv + Node 18+).
+# HexKit dev Makefile — see QUICKSTART.md for prerequisites (uv + Node 18+).
 #
 # Common flow on a fresh clone:
 #

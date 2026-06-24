@@ -25,7 +25,7 @@ const SHORTCUT_LABEL =
     : "Ctrl K";
 
 /**
- * The constant HexaUI composer: one quiet field on a surface card — attach on
+ * The constant HexKit composer: one quiet field on a surface card — attach on
  * the left, send on the right. When the bridge exposes a file capability, the
  * attach button opens a menu to upload a new file or reuse one from the
  * library; attached files persist on the conversation and show as a tray of

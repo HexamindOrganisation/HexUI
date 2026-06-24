@@ -2,7 +2,7 @@
 
 PATCH lets users set their display ``name`` and an opaque ``role`` string
 (which is forwarded to hexgate-wrapped agents as ``context.user.role``).
-HexUI never interprets the role; it's free text per the dev team's policy
+HexKit never interprets the role; it's free text per the dev team's policy
 vocabulary.
 """
 

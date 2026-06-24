@@ -1,21 +1,23 @@
 <div align="center">
 
-# HexUI
+<img src="assets/hexkit-mark.svg" width="72" height="72" alt="HexKit">
+
+# HexKit
 
 </div>
 
 A **UI/UX-first multi-agent chat platform**. Developers bring their own
-streaming agent backend (any framework); HexaUI provides the chat experience —
+streaming agent backend (any framework); HexKit provides the chat experience —
 a configurable, YAML-driven UI, conversation history, folders, file attachments
 — and a thin proxy that normalizes any framework's event stream into one schema
 the UI renders.
 
 <p align="center">
-  <img src="assets/hero.png" alt="HexaUI — the DevOps agent: a YAML-driven dashboard (service metrics + table) above a streaming chat, themed by the active agent's accent color." width="100%">
+  <img src="assets/hero.png" alt="HexKit — the DevOps agent: a YAML-driven dashboard (service metrics + table) above a streaming chat, themed by the active agent's accent color." width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml"><img src="https://github.com/HexamindOrganisation/HexUI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/HexamindOrganisation/hexkit/actions/workflows/ci.yml"><img src="https://github.com/HexamindOrganisation/hexkit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.11+-3776AB?logo=python&logoColor=white" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/node-18+-339933?logo=node.js&logoColor=white" alt="Node 18+">
@@ -67,10 +69,10 @@ events; the **proxy translates** and the **UI renders from YAML**. See
 | Path | Purpose |
 |---|---|
 | [custom-UI/](custom-UI/) | The product's heart: a React + TS library that renders a configurable agent UI from YAML (`<AgentUI>` + 12 built-in widgets). Theme bridge, streaming chat, the actions/`data_source` system. |
-| [front-app/](front-app/) | The HexaUI shell that consumes `custom-UI` and talks to the proxy. |
+| [front-app/](front-app/) | The HexKit shell that consumes `custom-UI` and talks to the proxy. |
 | [proxy-server/](proxy-server/) | The platform backend (FastAPI): JWT auth, conversations, folders, files, and the per-framework translators that normalize native events into the hexa SSE schema. Import package stays `platform_backend`. |
 | [packages/hexa-events/](packages/hexa-events/) | The internal event schema package consumed by the proxy (a local path dependency). |
-| [demo/](demo/) | The runnable reference backends: [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 6 sample agents), [`hexgate-agent/`](demo/hexgate-agent/) (a standalone hexgate-wrapped backend), [`starter-agent/`](demo/starter-agent/) (a minimal **copy-me** backend — the whole contract in one file), and [`scripts/`](demo/scripts/) (run + smoke checks, incl. the `verify_backend.py` conformance CLI). |
+| [demo/](demo/) | The runnable reference backends: [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 8 sample agents — Probe, Orbit, Atlas, Forge, Healthcare, DevOps, ITSM, HR), [`hexgate-agent/`](demo/hexgate-agent/) (a standalone hexgate-wrapped backend), [`starter-agent/`](demo/starter-agent/) (a minimal **copy-me** backend — the whole contract in one file), and [`scripts/`](demo/scripts/) (run + smoke checks, incl. the `verify_backend.py` conformance CLI). |
 | [legacy/](legacy/) | The dropped unified-runtime backend (`backend-runtime`), kept for reference. Not part of the live product. |
 | [CONTRACT.md](CONTRACT.md) | The developer contract — the one document an integrator reads. |
 
@@ -103,8 +105,8 @@ To get real model replies rather than the deterministic echo/canned fallback,
 put your provider keys in the **agent backend's environment** (`OPENAI_API_KEY`
 for Probe + the healthcare/devops agents, `GOOGLE_API_KEY` for Orbit) and start
 it with `AGENT_ENABLE_LLM=1` — see [`demo/agent-server/.env.sample`](demo/agent-server/.env.sample).
-HexUI never holds your model keys. The **Settings** page carries only your
-display name and a free-text `role`; if you point HexUI at a `hexgate`-wrapped
+HexKit never holds your model keys. The **Settings** page carries only your
+display name and a free-text `role`; if you point HexKit at a `hexgate`-wrapped
 agent, that role is forwarded to the agent and drives hexgate's per-tool policy
 + audit pipeline.
 
@@ -122,7 +124,158 @@ The bundled agents demonstrate the contract end to end:
 | **Forge** | `openai-agents` | the OpenAI Agents translator (canned native events) |
 | **Healthcare** | `openai-agents` (OpenAI) | a real clinical-assistant agent; HexGate-gated when `HEXGATE_KEY` is set, scoping per-tool policy to the caller's `context.user` role |
 | **DevOps** | `google-adk` (OpenAI via LiteLLM) | a real infra-assistant agent; HexGate-gated when `HEXGATE_KEY` is set, scoping per-tool policy to the caller's `context.user` role |
+| **ITSM** | `langchain` (deepagents) | a change-request assistant with a live lifecycle dashboard (refresh button → funnel metrics + change table updates as the agent's tools run) |
+| **HR** | `langchain` (deepagents) | an internal HR assistant; demonstrates stateful per-user data (`hr_state.py`) and role-gated tools when HexGate is wired |
 | **Hexgate Guard** | `hexgate` | a hexgate-wrapped agent that opens `User(user_id, role)` per run and emits audit decisions to the hexgate cloud (separate backend at [`demo/hexgate-agent/`](demo/hexgate-agent/)) |
+
+---
+
+## Components
+
+Every agent UI is built out of these widgets. You compose them in a `ui.yaml` —
+`type` picks the widget, `position` + `size` lay it out on the grid,
+`data_source` wires it to one of your `/actions/{name}` endpoints. No React,
+no CSS.
+
+<table>
+<tr>
+<td width="50%">
+
+**`ai-response`** — streaming chat surface
+
+The flagship widget. Renders the assistant's turn as it streams; embeds tool calls, markdown, code blocks, files inline.
+
+```yaml
+- name: transcript
+  type: ai-response
+  position: { horizontal: left, vertical: high }
+  size: { width: 8, height: 520 }
+  empty_text: "Ask something…"
+  thinking_indicator: dots
+```
+
+</td>
+<td width="50%">
+
+**`ai-chat-input`** — composer with attachments
+
+Text input + file attach + keyboard send. Forwards the composed turn through `POST /conversations/{id}/messages`.
+
+```yaml
+- name: chat-input
+  type: ai-chat-input
+  position: { horizontal: left, vertical: low }
+  size: { width: 12, height: auto }
+  placeholder: "Message Hexgate Guard…"
+  rows: 2
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**`metrics`** — KPI strip
+
+A row of labeled stat tiles. Pulls its values from a `data_source` action; auto-refreshes when a button-group action lists it in `refresh:`.
+
+```yaml
+- name: kpis
+  type: metrics
+  size: { width: 12, height: auto }
+  columns: 4
+  data_source: { action: change_summary }
+  metrics:
+    - { id: new, label: "New", format: number }
+```
+
+</td>
+<td>
+
+**`table`** — scrollable data grid
+
+Header row + virtualized rows. Sourced from an action that returns rows; can be refreshed by a button.
+
+```yaml
+- name: changes
+  type: table
+  size: { width: 12, height: auto }
+  data_source: { action: change_table }
+  has_header: true
+  empty_text: "No changes yet."
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**`tool-calls`** — live tool log
+
+Shows each tool the agent calls in real time, with arguments, status, and result. Default landing surface for any unaddressed tool call.
+
+```yaml
+- name: tools
+  type: tool-calls
+  position: { horizontal: right, vertical: high }
+  size: { width: 4, height: 520 }
+  empty_text: "Tool calls will appear here."
+```
+
+</td>
+<td>
+
+**`markdown`** — rich text + code
+
+Static markdown sourced from a string, or live markdown that the agent updates via a data source (e.g. a runbook the agent edits).
+
+```yaml
+- name: runbook
+  type: markdown
+  size: { width: 8, height: auto }
+  data_source: { action: get_runbook }
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**`form`** — structured input
+
+Labeled fields the user submits as one payload to an action. Each field declares its type; submit fires `POST /actions/{name}`.
+
+```yaml
+- name: deploy
+  type: form
+  size: { width: 6, height: auto }
+  action: deploy_service
+  fields:
+    - { name: env, label: Environment, type: text }
+    - { name: replicas, label: Replicas, type: number }
+```
+
+</td>
+<td>
+
+**`button-group`** — actions row
+
+A row of buttons, each tied to an action. Optional `refresh:` list re-pulls the named widgets after the action completes — the basis for the lifecycle dashboards in ITSM / DevOps.
+
+```yaml
+- name: ops
+  type: button-group
+  size: { width: 12, height: auto }
+  buttons:
+    - { label: "Refresh", action: refresh_changes,
+        refresh: [change-metrics, change-table] }
+```
+
+</td>
+</tr>
+</table>
+
+Four more widgets ship for layout and inputs: `dropdown`, `page-header`, `page-footer`, `spacer`. See [`custom-UI/src/registry/builtin.ts`](custom-UI/src/registry/builtin.ts) for the canonical registry and [demo/agent-server/src/agent_server/ui/](demo/agent-server/src/agent_server/ui/) for complete `ui.yaml` examples (the ITSM and DevOps agents stitch most of the widgets together into a live ops dashboard).
 
 ---
 

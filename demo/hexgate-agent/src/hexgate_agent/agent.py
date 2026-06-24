@@ -5,23 +5,23 @@ Two things make this backend interesting:
 1. **What it forwards.** A hexgate agent exposes a normalized event stream via
    ``hexgate.stream_agent(...)`` — hexgate's own unified schema (``run_start`` /
    ``block_delta`` / ``tool_start`` / ...). We do **not** reshape those events
-   into HexaUI's minimal `native` vocabulary; we forward them verbatim, tagged
+   into HexKit's minimal `native` vocabulary; we forward them verbatim, tagged
    ``framework: "hexgate"``, and the proxy's ``HexgateTranslator`` maps them
    onto the rich internal schema. That round-trip is the whole point: it
    proves the two products' "same events" decision actually holds on the wire.
 
-2. **The user identity it carries.** When the HexUI proxy sends
+2. **The user identity it carries.** When the HexKit proxy sends
    ``context.user = {id, name, role}`` (CONTRACT.md §5), this backend opens an
    ``async with hexgate.User(user_id=..., role=...)`` block around the run.
    That ContextVar drives:
 
    - per-tool policy decisions (``enforce_policy(role, tool, args)``);
    - per-request biscuit attenuation by ``HexgateClient``;
-   - audit events POSTed to the hexgate cloud, tagged with the HexUI user.
+   - audit events POSTed to the hexgate cloud, tagged with the HexKit user.
 
    To see those audit events on the cloud dashboard, set ``HEXGATE_KEY`` in
    this process's env (it's the dev/admin key — biscuits attenuate per request
-   to scope back down to the HexUI user).
+   to scope back down to the HexKit user).
 
 Wrapping vs. enforcement: ``create_agent`` already returns a hexgate-wrapped
 agent (the runtime wrap whose event stream we test here). Policy enforcement is
@@ -133,7 +133,7 @@ async def run_hexgate_agent(
     exact shape the proxy's HexgateTranslator reads. The caller tags every
     frame with ``framework: "hexgate"``.
     """
-    # The OpenAI key comes from this backend's own environment — HexUI does not
+    # The OpenAI key comes from this backend's own environment — HexKit does not
     # send provider keys. Read it per run; never persist or log it.
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -153,7 +153,7 @@ async def run_hexgate_agent(
     agent, handler = _get_agent(api_key)
     messages = _messages_with_files(input, context)
 
-    # Bind the run to the HexUI caller's identity. hexgate reads the ContextVar
+    # Bind the run to the HexKit caller's identity. hexgate reads the ContextVar
     # set by `async with User(...)` for policy decisions, biscuit attenuation,
     # and audit emission. Missing user block = no scoping (the SDK still runs;
     # decisions just won't be tagged with a user).

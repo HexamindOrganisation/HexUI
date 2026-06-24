@@ -22,7 +22,7 @@ Without API keys the agents reply with an echo placeholder. That's fine for a fi
 
 ## One-time setup
 
-From the repo root (`HexUI/`):
+From the repo root (`HexKit/`):
 
 ```bash
 make setup
@@ -58,7 +58,7 @@ To enable real LLM replies (instead of echo), prepend the env var:
 AGENT_ENABLE_LLM=1 bash demo/scripts/run-backends.sh
 ```
 
-Provider keys live in the **agent backend's** environment, not the app — set `OPENAI_API_KEY` (Probe + healthcare/devops) and/or `GOOGLE_API_KEY` (Orbit) in your shell or in `demo/agent-server/.env` before starting the backends. HexUI never holds your model keys.
+Provider keys live in the **agent backend's** environment, not the app — set `OPENAI_API_KEY` (Probe + healthcare/devops) and/or `GOOGLE_API_KEY` (Orbit) in your shell or in `demo/agent-server/.env` before starting the backends. HexKit never holds your model keys.
 
 #### Terminal 2 — frontend
 
@@ -88,7 +88,7 @@ Open <http://localhost:8873>.
    startup when `PLATFORM_DEMO_USERS_FILE` is set (the `make dev` launcher sets
    it for you). Or sign up a fresh account at **/signup**.
 3. The chat shell loads with an empty greeting.
-4. Click the agent picker in the top bar and choose **Probe** (or any of the six demo agents — Probe, Orbit, Atlas, Forge, Healthcare, DevOps).
+4. Click the agent picker in the top bar and choose **Probe** (or any of the eight demo agents — Probe, Orbit, Atlas, Forge, Healthcare, DevOps, ITSM, HR).
 5. Type a message and send.
 6. With `AGENT_ENABLE_LLM=1` and a provider key in the agent backend's env → a real LLM reply.
    Without → an echo of your message (this confirms the full pipeline works).

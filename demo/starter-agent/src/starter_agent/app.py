@@ -1,6 +1,6 @@
-"""The entire HexaUI developer contract, in one file.
+"""The entire HexKit developer contract, in one file.
 
-This is a **copy-me template**: the smallest backend the HexaUI proxy will talk
+This is a **copy-me template**: the smallest backend the HexKit proxy will talk
 to. It implements the five endpoints from CONTRACT.md with a single `native`
 echo agent, and nothing else. Read it top to bottom — every endpoint is
 annotated with the contract section it satisfies. To build your own agent, copy
@@ -227,7 +227,7 @@ def _last_user_text(input: dict[str, Any]) -> str:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="HexaUI Starter Agent", version="0.1.0")
+    app = FastAPI(title="HexKit Starter Agent", version="0.1.0")
     # run_id -> cancel Event. Process-local; a multi-worker deploy needs a
     # shared store. Created here so it exists before any lifespan runs.
     app.state.runs = {}

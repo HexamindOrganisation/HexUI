@@ -28,7 +28,7 @@ const KINDS: { id: "all" | Kind; label: string; tag?: string }[] = [
 ];
 
 /**
- * The Files library — the editorial full-screen view from the HexaUI handoff:
+ * The Files library — the editorial full-screen view from the HexKit handoff:
  * a masthead with file/byte totals, a search + kind-filter + upload toolbar, a
  * monochrome grid (the agent stays the only color), inline rename, and a
  * deferred delete with an undo toast. Files are global and reusable; attach any

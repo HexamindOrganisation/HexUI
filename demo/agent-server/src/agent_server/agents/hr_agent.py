@@ -1,6 +1,6 @@
 """HR (RH) assistant agent — RBAC with field-level scoping (LangChain).
 
-Vendored from ``hexgate/examples/hr_agent.py``; the HexaUI wrapper is ``hr.py``.
+Vendored from ``hexgate/examples/hr_agent.py``; the HexKit wrapper is ``hr.py``.
 One agent definition — the caller's ROLE flips every decision via the platform
 policy (resolved by agent name ``hr_agent``; source in
 ``hexgate/examples/hr_policy.yaml``). The escalation ladder, least → most
@@ -47,7 +47,7 @@ def _actor() -> str:
     from hexgate.runtime import get_current_user
 
     user = get_current_user()
-    return user.user_id if user is not None else "hexui-demo"
+    return user.user_id if user is not None else "hexkit-demo"
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +287,7 @@ async def stream_as(input: Any, *, user_id: str, role: str) -> AsyncIterator[Any
     (default < manager < gestionnaire_rh) flips each decision."""
     from hexgate.runtime import User
 
-    user = User(user_id=user_id, role=role, session_id="hexui-demo-hr")
+    user = User(user_id=user_id, role=role, session_id="hexkit-demo-hr")
     async for event in _enforced_agent().astream_events(
         messages_input(input), user=user
     ):

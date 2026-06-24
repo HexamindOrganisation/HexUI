@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Contract-conformance checker for a HexaUI developer backend.
+"""Contract-conformance checker for a HexKit developer backend.
 
 Point it at *your own* running backend URL and it validates the CONTRACT.md §8
-checklist the way the HexaUI proxy would — assigning a run_id, reading the SSE
+checklist the way the HexKit proxy would — assigning a run_id, reading the SSE
 stream over a real socket, cancelling mid-run, and inspecting every frame's
 shape. Each check prints PASS / FAIL / SKIP; the process exits non-zero if any
 required check fails, so it doubles as a CI gate.
@@ -308,13 +308,13 @@ async def check_actions(c: httpx.AsyncClient, r: Report, agent_id: str, ui_text:
 
 
 async def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate a HexaUI backend against CONTRACT.md §8.")
+    ap = argparse.ArgumentParser(description="Validate a HexKit backend against CONTRACT.md §8.")
     ap.add_argument("base_url", help="Base URL of the running backend, e.g. http://127.0.0.1:8880")
     ap.add_argument("--agent", help="Agent id to exercise (default: first in the roster)")
     ap.add_argument("--timeout", type=float, default=30.0, help="Per-request timeout seconds")
     args = ap.parse_args()
 
-    print(f"HexaUI contract conformance — {args.base_url}")
+    print(f"HexKit contract conformance — {args.base_url}")
     r = Report()
     async with httpx.AsyncClient(base_url=args.base_url.rstrip("/"), timeout=args.timeout) as c:
         roster = await check_roster(c, r)

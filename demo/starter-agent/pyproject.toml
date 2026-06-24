@@ -1,7 +1,7 @@
 [project]
 name = "starter-agent"
 version = "0.1.0"
-description = "Minimal copy-me backend for the HexaUI streaming contract"
+description = "Minimal copy-me backend for the HexKit streaming contract"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

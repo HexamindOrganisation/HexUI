@@ -1,7 +1,7 @@
 [project]
-name = "hexaui-proxy"
+name = "hexkit-proxy"
 version = "0.1.0"
-description = "HexaUI platform backend — single-user proxy: conversations, files, and per-framework SSE translation (import package stays `platform_backend`)"
+description = "HexKit platform backend — single-user proxy: conversations, files, and per-framework SSE translation (import package stays `platform_backend`)"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
@@ -40,4 +40,4 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/platform_backend"]
 
-# Ruff config is shared at the repo root (HexUI/ruff.toml).
+# Ruff config is shared at the repo root (HexKit/ruff.toml).

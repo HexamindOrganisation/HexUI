@@ -1,4 +1,4 @@
-"""The contract endpoints the HexaUI proxy calls.
+"""The contract endpoints the HexKit proxy calls.
 
     GET  /agents                       roster
     GET  /agents/{id}/ui               per-agent ui.yaml (text/yaml)

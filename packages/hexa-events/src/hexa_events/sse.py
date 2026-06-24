@@ -1,5 +1,5 @@
 """
-SSE wire serialization for the HexaUI streaming contract.
+SSE wire serialization for the HexKit streaming contract.
 
 A backend serves the stream as ``text/event-stream`` and frames each
 :class:`~hexa_events.events.StreamEvent` with :func:`to_sse_frame`, which emits

@@ -1,4 +1,4 @@
-"""HexaUI contract wrapper for the devops agent.
+"""HexKit contract wrapper for the devops agent.
 
 The agent runs on Google ADK, but its model is OpenAI via LiteLLM — which reads
 ``OPENAI_API_KEY`` from the environment. This resolves that key, picks the plain
@@ -15,6 +15,7 @@ from typing import Any
 
 from .. import protocol
 from . import devops_agent
+from .google_adk import to_native_event
 
 logger = logging.getLogger("agent_server.devops")
 
@@ -44,12 +45,12 @@ class DevopsAgent:
         text = protocol.last_user_text(input)
         # HexGate-gated path whenever HexGate is configured; plain ADK otherwise.
         if os.getenv("HEXGATE_KEY"):
-            # Scope policy decisions to the signed-in HexUI user. `id` / `role`
+            # Scope policy decisions to the signed-in HexKit user. `id` / `role`
             # ride in `context.user` (CONTRACT.md §5); fall back to the static
             # demo identity and HEXGATE_ROLE for standalone runs that send no
             # user block.
             caller = protocol.caller(context)
-            user_id = caller.get("id") or "hexui-demo"
+            user_id = caller.get("id") or "hexkit-demo"
             role = caller.get("role") or os.getenv("HEXGATE_ROLE", "default")
             if role not in _DEVOPS_ROLES:
                 role = "default"
@@ -59,7 +60,7 @@ class DevopsAgent:
 
         try:
             async for adk_event in events:
-                native_event = devops_agent.to_native_event(adk_event)
+                native_event = to_native_event(adk_event)
                 if native_event is not None:
                     yield native_event
         except Exception as exception:  # noqa: BLE001 — degrade to a visible error event

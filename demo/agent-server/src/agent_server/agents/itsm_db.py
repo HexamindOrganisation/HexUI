@@ -1,7 +1,7 @@
 """Minimal ITSM datastore for the change-request agent.
 
 Vendored from ``hexgate/examples/itsm_db.py``, but keyed off the caller's **name**
-(``requester_name`` / ``implementer_name``) rather than email, since HexUI's proxy
+(``requester_name`` / ``implementer_name``) rather than email, since HexKit's proxy
 never forwards email. Plain CRUD over an in-memory stdlib ``sqlite3`` DB plus a
 local audit trail (UC-10); the tools enforce state/ownership. Process-global, like
 ``devops_state``.

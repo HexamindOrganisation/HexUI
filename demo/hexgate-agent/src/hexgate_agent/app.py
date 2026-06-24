@@ -1,4 +1,4 @@
-"""The five HexaUI contract endpoints for a hexgate-wrapped agent.
+"""The five HexKit contract endpoints for a hexgate-wrapped agent.
 
 Structurally identical to demo/starter-agent/ — same five endpoints, same SSE
 framing — with two differences:
@@ -157,7 +157,7 @@ async def invoke_action(
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="HexaUI Hexgate Agent", version="0.1.0")
+    app = FastAPI(title="HexKit Hexgate Agent", version="0.1.0")
     # run_id -> cancel Event. Process-local; a multi-worker deploy needs a
     # shared store. Created here so it exists before any lifespan runs.
     app.state.runs = {}
