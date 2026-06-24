@@ -88,7 +88,7 @@ Open <http://localhost:8873>.
    startup when `PLATFORM_DEMO_USERS_FILE` is set (the `make dev` launcher sets
    it for you). Or sign up a fresh account at **/signup**.
 3. The chat shell loads with an empty greeting.
-4. Click the agent picker in the top bar and choose **Probe** (or any of the six demo agents — Probe, Orbit, Atlas, Forge, Healthcare, DevOps).
+4. Click the agent picker in the top bar and choose **Probe** (or any of the eight demo agents — Probe, Orbit, Atlas, Forge, Healthcare, DevOps, ITSM, HR).
 5. Type a message and send.
 6. With `AGENT_ENABLE_LLM=1` and a provider key in the agent backend's env → a real LLM reply.
    Without → an echo of your message (this confirms the full pipeline works).

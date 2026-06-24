@@ -72,7 +72,7 @@ events; the **proxy translates** and the **UI renders from YAML**. See
 | [front-app/](front-app/) | The HexKit shell that consumes `custom-UI` and talks to the proxy. |
 | [proxy-server/](proxy-server/) | The platform backend (FastAPI): JWT auth, conversations, folders, files, and the per-framework translators that normalize native events into the hexa SSE schema. Import package stays `platform_backend`. |
 | [packages/hexa-events/](packages/hexa-events/) | The internal event schema package consumed by the proxy (a local path dependency). |
-| [demo/](demo/) | The runnable reference backends: [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 6 sample agents), [`hexgate-agent/`](demo/hexgate-agent/) (a standalone hexgate-wrapped backend), [`starter-agent/`](demo/starter-agent/) (a minimal **copy-me** backend — the whole contract in one file), and [`scripts/`](demo/scripts/) (run + smoke checks, incl. the `verify_backend.py` conformance CLI). |
+| [demo/](demo/) | The runnable reference backends: [`agent-server/`](demo/agent-server/) (a contract-conformant developer backend with 8 sample agents — Probe, Orbit, Atlas, Forge, Healthcare, DevOps, ITSM, HR), [`hexgate-agent/`](demo/hexgate-agent/) (a standalone hexgate-wrapped backend), [`starter-agent/`](demo/starter-agent/) (a minimal **copy-me** backend — the whole contract in one file), and [`scripts/`](demo/scripts/) (run + smoke checks, incl. the `verify_backend.py` conformance CLI). |
 | [legacy/](legacy/) | The dropped unified-runtime backend (`backend-runtime`), kept for reference. Not part of the live product. |
 | [CONTRACT.md](CONTRACT.md) | The developer contract — the one document an integrator reads. |
 
@@ -124,6 +124,8 @@ The bundled agents demonstrate the contract end to end:
 | **Forge** | `openai-agents` | the OpenAI Agents translator (canned native events) |
 | **Healthcare** | `openai-agents` (OpenAI) | a real clinical-assistant agent; HexGate-gated when `HEXGATE_KEY` is set, scoping per-tool policy to the caller's `context.user` role |
 | **DevOps** | `google-adk` (OpenAI via LiteLLM) | a real infra-assistant agent; HexGate-gated when `HEXGATE_KEY` is set, scoping per-tool policy to the caller's `context.user` role |
+| **ITSM** | `langchain` (deepagents) | a change-request assistant with a live lifecycle dashboard (refresh button → funnel metrics + change table updates as the agent's tools run) |
+| **HR** | `langchain` (deepagents) | an internal HR assistant; demonstrates stateful per-user data (`hr_state.py`) and role-gated tools when HexGate is wired |
 | **Hexgate Guard** | `hexgate` | a hexgate-wrapped agent that opens `User(user_id, role)` per run and emits audit decisions to the hexgate cloud (separate backend at [`demo/hexgate-agent/`](demo/hexgate-agent/)) |
 
 ---
@@ -273,7 +275,7 @@ A row of buttons, each tied to an action. Optional `refresh:` list re-pulls the 
 </tr>
 </table>
 
-Five more widgets ship for layout and forms: `dropdown`, `page-header`, `page-footer`, `placeholder`, `spacer`. See [`custom-UI/src/widgets/`](custom-UI/src/widgets/) for the full catalog and [demo/agent-server/src/agent_server/ui/](demo/agent-server/src/agent_server/ui/) for complete `ui.yaml` examples (the ITSM and DevOps agents stitch most of the widgets together into a live ops dashboard).
+Four more widgets ship for layout and inputs: `dropdown`, `page-header`, `page-footer`, `spacer`. See [`custom-UI/src/registry/builtin.ts`](custom-UI/src/registry/builtin.ts) for the canonical registry and [demo/agent-server/src/agent_server/ui/](demo/agent-server/src/agent_server/ui/) for complete `ui.yaml` examples (the ITSM and DevOps agents stitch most of the widgets together into a live ops dashboard).
 
 ---
 
